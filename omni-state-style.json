@@ -2,11 +2,12 @@
   "theme": "dark",
   "accent": "#3b82f6",
   "font": "sans",
-  "sectionOrder": ["sensors", "controls", "files"],
+  "sectionOrder": ["sensors", "controls", "files", "services"],
   "cardOrder": {
-    "sensors": ["temp_living", "humidity", "cpu", "memory"],
+    "sensors":  ["cpu", "memory", "disk", "net_rx"],
     "toggles":  ["fan", "lights", "ac", "alarm"],
     "sliders":  ["volume"],
-    "files":    ["documents"]
+    "files":    ["documents"],
+    "services": ["services"]
   }
 }

@@ -21,11 +21,12 @@ import { CSS } from "@dnd-kit/utilities";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Sensor   = { id: string; label: string; value: number; unit: string; min: number; max: number };
-type Toggle   = { id: string; label: string; enabled: boolean };
-type Slider   = { id: string; label: string; value: number; min: number; max: number; unit: string };
-type FileItem = { name: string; size: number; modified: number };
+type Sensor    = { id: string; label: string; value: number; unit: string; min: number; max: number };
+type Toggle    = { id: string; label: string; enabled: boolean };
+type Slider    = { id: string; label: string; value: number; min: number; max: number; unit: string };
+type FileItem  = { name: string; size: number; modified: number };
 type FileGroup = { id: string; label: string; items: FileItem[] };
+type Service   = { id: string; label: string; active: boolean };
 
 type OmniStyle = {
   theme: "dark" | "light";
@@ -36,10 +37,11 @@ type OmniStyle = {
 };
 
 type SensorsState = {
-  sensors: Sensor[];
-  toggles: Toggle[];
-  sliders: Slider[];
-  files:   FileGroup[];
+  sensors:  Sensor[];
+  toggles:  Toggle[];
+  sliders:  Slider[];
+  files:    FileGroup[];
+  services: Service[];
 };
 
 interface StatePayload {
@@ -61,19 +63,21 @@ const DEFAULT_STYLE: OmniStyle = {
   theme: "dark",
   accent: "#3b82f6",
   font: "sans",
-  sectionOrder: ["sensors", "controls", "files"],
+  sectionOrder: ["sensors", "controls", "files", "services"],
   cardOrder: {
-    sensors: ["temp_living", "humidity", "cpu", "memory"],
+    sensors:  ["cpu", "memory", "disk", "net_rx"],
     toggles:  ["fan", "lights", "ac", "alarm"],
     sliders:  ["volume"],
     files:    ["documents"],
+    services: ["services"],
   },
 };
 
 const SECTION_LABELS: Record<string, string> = {
-  sensors: "Sensors",
+  sensors:  "Sensors",
   controls: "Controls",
-  files: "Files",
+  files:    "Files",
+  services: "Services",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -86,7 +90,12 @@ function isSensorsState(v: unknown): v is SensorsState {
 
 function mergeStyle(saved?: OmniStyle): OmniStyle {
   if (!saved) return DEFAULT_STYLE;
-  return { ...DEFAULT_STYLE, ...saved, cardOrder: { ...DEFAULT_STYLE.cardOrder, ...saved.cardOrder } };
+  const merged = { ...DEFAULT_STYLE, ...saved, cardOrder: { ...DEFAULT_STYLE.cardOrder, ...saved.cardOrder } };
+  // Union any new sections from DEFAULT_STYLE not in saved sectionOrder
+  for (const s of DEFAULT_STYLE.sectionOrder) {
+    if (!merged.sectionOrder.includes(s)) merged.sectionOrder = [...merged.sectionOrder, s];
+  }
+  return merged;
 }
 
 function formatTs(ts: number | null) {
@@ -109,7 +118,7 @@ function valueColor(ratio: number) {
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
 const SENSOR_ICONS: Record<string, string> = {
-  temp_living: "🌡️", humidity: "💧", cpu: "⚡", memory: "🧠",
+  temp_living: "🌡️", humidity: "💧", cpu: "⚡", memory: "🧠", disk: "💾", net_rx: "📡",
 };
 
 function GripIcon() {
@@ -276,6 +285,34 @@ function FileCard({ group }: { group: FileGroup }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ServicesCard({ services }: { services: Service[] }) {
+  if (services.length === 0) return null;
+  return (
+    <div className="rounded-xl p-4 col-span-2 flex flex-col gap-3 border" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
+      <div className="flex items-center gap-2">
+        <span className="text-lg">🖥️</span>
+        <span className="text-sm font-medium" style={{ color: "var(--text-1)" }}>System Services</span>
+        <span className="ml-auto text-xs px-2 py-0.5 rounded-full" style={{ color: "var(--text-3)", backgroundColor: "var(--bg-input)" }}>
+          {services.filter((s) => s.active).length}/{services.length} active
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {services.map((svc) => (
+          <div key={svc.id} className="flex items-center gap-2 py-1">
+            <span
+              className="w-2 h-2 rounded-full flex-shrink-0"
+              style={{ backgroundColor: svc.active ? "#22c55e" : "#ef4444" }}
+            />
+            <span className="text-xs truncate" style={{ color: svc.active ? "var(--text-1)" : "var(--text-3)" }}>
+              {svc.label}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -472,8 +509,9 @@ export default function Dashboard() {
   const base = serverData?.state;
   const sv = isSensorsState(base) ? {
     ...base,
-    toggles: base.toggles.map((t)  => t.id  in pendingValues ? { ...t,  enabled: pendingValues[t.id]  as boolean } : t),
-    sliders: (base.sliders ?? []).map((s) => s.id in pendingValues ? { ...s, value: pendingValues[s.id] as number  } : s),
+    toggles:  base.toggles.map((t)  => t.id  in pendingValues ? { ...t,  enabled: pendingValues[t.id]  as boolean } : t),
+    sliders:  (base.sliders ?? []).map((s) => s.id in pendingValues ? { ...s, value: pendingValues[s.id] as number  } : s),
+    services: (base.services ?? []),
   } : null;
 
   function sorted<T extends { id: string }>(items: T[], key: string) {
@@ -564,6 +602,12 @@ export default function Dashboard() {
                   {sid === "files" && (
                     <div className="grid grid-cols-2 gap-3">
                       {sv.files.map((g) => <FileCard key={g.id} group={g} />)}
+                    </div>
+                  )}
+
+                  {sid === "services" && sv.services.length > 0 && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <ServicesCard services={sv.services} />
                     </div>
                   )}
 

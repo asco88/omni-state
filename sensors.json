@@ -1,9 +1,9 @@
 {
   "sensors": [
-    { "id": "temp_living", "label": "Living Room Temp", "value": 22.0, "unit": "°C", "min": 0,  "max": 50  },
-    { "id": "humidity",    "label": "Humidity",          "value": 65.0, "unit": "%",  "min": 0,  "max": 100 },
-    { "id": "cpu",         "label": "CPU Usage",         "value": 30.0, "unit": "%",  "min": 0,  "max": 100 },
-    { "id": "memory",      "label": "Memory Usage",      "value": 55.0, "unit": "%",  "min": 0,  "max": 100 }
+    { "id": "cpu",    "label": "CPU Usage",  "value": 0.0, "unit": "%",    "min": 0, "max": 100  },
+    { "id": "memory", "label": "Memory",     "value": 0.0, "unit": "%",    "min": 0, "max": 100  },
+    { "id": "disk",   "label": "Disk /",     "value": 0.0, "unit": "%",    "min": 0, "max": 100  },
+    { "id": "net_rx", "label": "Network RX", "value": 0.0, "unit": "KB/s", "min": 0, "max": 5000 }
   ],
   "toggles": [
     { "id": "fan",    "label": "Fan",              "enabled": false },
@@ -15,10 +15,7 @@
     { "id": "volume", "label": "Master Volume", "value": 65, "min": 0, "max": 100, "unit": "%" }
   ],
   "files": [
-    {
-      "id": "documents",
-      "label": "Mock Files",
-      "items": []
-    }
-  ]
+    { "id": "documents", "label": "Mock Files", "items": [] }
+  ],
+  "services": []
 }
