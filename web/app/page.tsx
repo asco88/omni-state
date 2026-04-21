@@ -457,12 +457,15 @@ export default function Dashboard() {
     });
   }
 
+  const PENDING_TIMEOUT_MS = 15_000;
+
   function handleToggle(id: string) {
     const base = serverData?.state;
     if (!isSensorsState(base)) return;
     const cur = id in pendingValues ? (pendingValues[id] as boolean) : (base.toggles.find((t) => t.id === id)?.enabled ?? false);
     setPending((p) => ({ ...p, [id]: !cur }));
     pushState({ ...base, toggles: base.toggles.map((t) => t.id === id ? { ...t, enabled: !cur } : t) });
+    setTimeout(() => setPending((p) => { const n = { ...p }; delete n[id]; return n; }), PENDING_TIMEOUT_MS);
   }
 
   function handleSlider(id: string, value: number) {
@@ -470,6 +473,7 @@ export default function Dashboard() {
     if (!isSensorsState(base)) return;
     setPending((p) => ({ ...p, [id]: value }));
     pushState({ ...base, sliders: (base.sliders ?? []).map((s) => s.id === id ? { ...s, value } : s) });
+    setTimeout(() => setPending((p) => { const n = { ...p }; delete n[id]; return n; }), PENDING_TIMEOUT_MS);
   }
 
   function handleStyleChange(newStyle: OmniStyle) {
