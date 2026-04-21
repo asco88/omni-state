@@ -1,15 +1,17 @@
 {
   "sensors": [
-    { "id": "cpu",    "label": "CPU Usage",  "value": 0.0, "unit": "%",    "min": 0, "max": 100  },
-    { "id": "memory", "label": "Memory",     "value": 0.0, "unit": "%",    "min": 0, "max": 100  },
-    { "id": "disk",   "label": "Disk /",     "value": 0.0, "unit": "%",    "min": 0, "max": 100  },
-    { "id": "net_rx", "label": "Network RX", "value": 0.0, "unit": "KB/s", "min": 0, "max": 5000 }
+    { "id": "cpu",             "label": "CPU Usage",    "value": 0.0, "unit": "%",    "min": 0, "max": 100  },
+    { "id": "memory",          "label": "Memory",       "value": 0.0, "unit": "%",    "min": 0, "max": 100  },
+    { "id": "disk",            "label": "Disk /",       "value": 0.0, "unit": "%",    "min": 0, "max": 100  },
+    { "id": "net_rx",          "label": "Network RX",   "value": 0.0, "unit": "KB/s", "min": 0, "max": 5000 },
+    { "id": "ha_solar_power",  "label": "Solar Power",  "value": 0.0, "unit": "kW",   "min": 0, "max": 12   },
+    { "id": "ha_solar_battery","label": "Solar Battery","value": 0.0, "unit": "%",    "min": 0, "max": 100  }
   ],
   "toggles": [
-    { "id": "fan",    "label": "Fan",              "enabled": false },
-    { "id": "lights", "label": "Lights",           "enabled": true  },
-    { "id": "ac",     "label": "Air Conditioning", "enabled": false },
-    { "id": "alarm",  "label": "Alarm",            "enabled": false }
+    { "id": "ha_entry",   "label": "Entry Light", "enabled": false },
+    { "id": "ha_front",   "label": "Front",       "enabled": false },
+    { "id": "ha_left",    "label": "Left Switch",  "enabled": false },
+    { "id": "ha_parking", "label": "Parking",     "enabled": false }
   ],
   "sliders": [
     { "id": "volume", "label": "Master Volume", "value": 65, "min": 0, "max": 100, "unit": "%" }

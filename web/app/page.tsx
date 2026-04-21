@@ -65,8 +65,8 @@ const DEFAULT_STYLE: OmniStyle = {
   font: "sans",
   sectionOrder: ["sensors", "controls", "files", "services"],
   cardOrder: {
-    sensors:  ["cpu", "memory", "disk", "net_rx"],
-    toggles:  ["fan", "lights", "ac", "alarm"],
+    sensors:  ["cpu", "memory", "disk", "net_rx", "ha_solar_power", "ha_solar_battery"],
+    toggles:  ["ha_entry", "ha_front", "ha_left", "ha_parking"],
     sliders:  ["volume"],
     files:    ["documents"],
     services: ["services"],
@@ -119,6 +119,7 @@ function valueColor(ratio: number) {
 
 const SENSOR_ICONS: Record<string, string> = {
   temp_living: "🌡️", humidity: "💧", cpu: "⚡", memory: "🧠", disk: "💾", net_rx: "📡",
+  ha_solar_power: "☀️", ha_solar_battery: "🔋",
 };
 
 function GripIcon() {
