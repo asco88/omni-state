@@ -67,6 +67,13 @@ HA_PUSH_MAP = [
     ("net_rx", "sensor.omnistate_net_rx", "OmniState Network", "KB/s", "mdi:network"),
 ]
 
+HA_ACTIONS = [
+    {"id": "all_lights_off",  "label": "All Lights OFF"},
+    {"id": "entry_light_on",  "label": "Entry Light ON"},
+    {"id": "front_lights_on", "label": "Front Lights ON"},
+    {"id": "front_light_off", "label": "Front Light OFF"},
+]
+
 INITIAL_STATE: dict = {
     "sensors": [
         {"id": "cpu",             "label": "CPU Usage",    "value": 0.0, "unit": "%",    "min": 0, "max": 100},
@@ -89,6 +96,7 @@ INITIAL_STATE: dict = {
         {"id": "documents", "label": "Mock Files", "items": []},
     ],
     "services": [],
+    "actions":  [a.copy() for a in HA_ACTIONS],
 }
 
 
@@ -278,9 +286,13 @@ def scan_files(state: dict) -> dict:
 def load_state() -> dict:
     try:
         data = json.loads(SENSORS_FILE.read_text(encoding="utf-8"))
-        for key in ("sensors", "toggles", "sliders", "files", "services"):
+        for key in ("sensors", "toggles", "sliders", "files", "services", "actions"):
             if key not in data:
                 data[key] = INITIAL_STATE[key]
+        # Keep action definitions in sync (add new, preserve last_triggered)
+        existing = {a["id"]: a for a in data["actions"]}
+        data["actions"] = [{**a, **{k: v for k, v in existing.get(a["id"], {}).items() if k != "id"}}
+                           for a in HA_ACTIONS]
         return data
     except (FileNotFoundError, json.JSONDecodeError):
         return json.loads(json.dumps(INITIAL_STATE))

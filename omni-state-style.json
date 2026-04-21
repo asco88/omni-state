@@ -2,7 +2,7 @@
   "theme": "dark",
   "accent": "#3b82f6",
   "font": "sans",
-  "sectionOrder": ["sensors", "controls", "files", "services"],
+  "sectionOrder": ["sensors", "controls", "files", "services", "actions"],
   "cardOrder": {
     "sensors":  ["cpu", "memory", "disk", "net_rx", "ha_solar_power", "ha_solar_battery"],
     "toggles":  ["ha_entry", "ha_front", "ha_left", "ha_parking"],

@@ -44,6 +44,16 @@ HA_SWITCH_ENTITIES: dict[str, str] = {
     "ha_parking": "switch.wifi_smart_switch_switch_3",
 }
 
+# Maps OmniState action IDs → HA automation/script entity IDs
+HA_ACTION_ENTITIES: dict[str, str] = {
+    "all_lights_off":  "automation.turn_all_light_off",
+    "entry_light_on":  "automation.solar_based_turn_on_lights",
+    "front_lights_on": "automation.turn_front_lights_on",
+    "front_light_off": "automation.turn_front_light_off",
+}
+
+ACTION_TRIGGER_WINDOW_MS = 60_000  # ignore triggers older than 60 s (prevents re-fire on restart)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -105,6 +115,24 @@ def apply_desired(file: Path, payload: dict, label: str) -> None:
     log.info("%s applied from cloud → %s", label, file)
 
 
+def call_ha_automation(entity_id: str) -> None:
+    if not HA_TOKEN:
+        return
+    domain  = entity_id.split(".")[0]
+    service = "trigger" if domain == "automation" else "turn_on"
+    try:
+        r = requests.post(
+            f"{HA_URL}/api/services/{domain}/{service}",
+            headers={"Authorization": f"Bearer {HA_TOKEN}", "Content-Type": "application/json"},
+            json={"entity_id": entity_id},
+            timeout=REQUEST_TIMEOUT,
+        )
+        r.raise_for_status()
+        log.info("HA triggered: %s", entity_id)
+    except requests.RequestException as exc:
+        log.warning("HA trigger %s failed: %s", entity_id, exc)
+
+
 def call_ha_switch(entity_id: str, on: bool) -> None:
     if not HA_TOKEN:
         return
@@ -132,6 +160,7 @@ def heartbeat_loop() -> None:
 
 
 _last_ha_desired: dict[str, bool] = {}
+_last_trigger_times: dict[str, int] = {}
 
 
 def state_sync_loop() -> None:
@@ -141,7 +170,7 @@ def state_sync_loop() -> None:
         if data:
             rev, state = data.get("rev"), data.get("state")
             if rev and rev != last_rev and isinstance(state, dict):
-                # Directly control HA switches — don't rely on sensors.json as intermediary
+                # HA switches — call directly
                 for toggle in state.get("toggles", []):
                     tid = toggle.get("id", "")
                     eid = HA_SWITCH_ENTITIES.get(tid)
@@ -150,6 +179,18 @@ def state_sync_loop() -> None:
                         if _last_ha_desired.get(tid) != desired:
                             call_ha_switch(eid, desired)
                             _last_ha_desired[tid] = desired
+
+                # HA automations — fire if timestamp is recent and new
+                now_ms = time.time() * 1000
+                for action in state.get("actions", []):
+                    aid = action.get("id", "")
+                    ts  = action.get("last_triggered")
+                    eid = HA_ACTION_ENTITIES.get(aid)
+                    if eid and ts and ts != _last_trigger_times.get(aid):
+                        if now_ms - ts < ACTION_TRIGGER_WINDOW_MS:
+                            call_ha_automation(eid)
+                        _last_trigger_times[aid] = ts
+
                 apply_desired(DATA_FILE, state, "State")
                 last_rev = rev
         time.sleep(CLOUD_POLL_INTERVAL)

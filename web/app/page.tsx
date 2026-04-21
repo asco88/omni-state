@@ -27,6 +27,7 @@ type Slider    = { id: string; label: string; value: number; min: number; max: n
 type FileItem  = { name: string; size: number; modified: number };
 type FileGroup = { id: string; label: string; items: FileItem[] };
 type Service   = { id: string; label: string; active: boolean };
+type Action    = { id: string; label: string; last_triggered?: number | null };
 
 type OmniStyle = {
   theme: "dark" | "light";
@@ -42,6 +43,7 @@ type SensorsState = {
   sliders:  Slider[];
   files:    FileGroup[];
   services: Service[];
+  actions:  Action[];
 };
 
 interface StatePayload {
@@ -63,7 +65,7 @@ const DEFAULT_STYLE: OmniStyle = {
   theme: "dark",
   accent: "#3b82f6",
   font: "sans",
-  sectionOrder: ["sensors", "controls", "files", "services"],
+  sectionOrder: ["sensors", "controls", "files", "services", "actions"],
   cardOrder: {
     sensors:  ["cpu", "memory", "disk", "net_rx", "ha_solar_power", "ha_solar_battery"],
     toggles:  ["ha_entry", "ha_front", "ha_left", "ha_parking"],
@@ -78,6 +80,7 @@ const SECTION_LABELS: Record<string, string> = {
   controls: "Controls",
   files:    "Files",
   services: "Services",
+  actions:  "Automations",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -290,6 +293,37 @@ function FileCard({ group }: { group: FileGroup }) {
   );
 }
 
+function ActionButton({ action, onTrigger }: { action: Action; onTrigger: (id: string) => void }) {
+  const [fired, setFired] = useState(false);
+  function handleClick() {
+    onTrigger(action.id);
+    setFired(true);
+    setTimeout(() => setFired(false), 2000);
+  }
+  return (
+    <button
+      onClick={handleClick}
+      className="rounded-xl p-4 flex items-center gap-3 border transition-all duration-150 active:scale-95 text-left w-full"
+      style={{
+        backgroundColor: fired ? "var(--accent)" : "var(--bg-card)",
+        borderColor: fired ? "var(--accent)" : "var(--border)",
+      }}
+    >
+      <span className="text-lg flex-shrink-0">{fired ? "✅" : "▶️"}</span>
+      <div className="min-w-0">
+        <div className="text-sm font-medium truncate" style={{ color: fired ? "#fff" : "var(--text-1)" }}>
+          {fired ? "Triggered!" : action.label}
+        </div>
+        {action.last_triggered && !fired && (
+          <div className="text-xs mt-0.5" style={{ color: "var(--text-3)" }}>
+            Last: {new Date(action.last_triggered).toLocaleTimeString()}
+          </div>
+        )}
+      </div>
+    </button>
+  );
+}
+
 function ServicesCard({ services }: { services: Service[] }) {
   if (services.length === 0) return null;
   return (
@@ -476,6 +510,14 @@ export default function Dashboard() {
     setTimeout(() => setPending((p) => { const n = { ...p }; delete n[id]; return n; }), PENDING_TIMEOUT_MS);
   }
 
+  function handleAction(id: string) {
+    const base = serverData?.state;
+    if (!isSensorsState(base)) return;
+    const ts = Date.now();
+    const actions = (base.actions ?? []).map((a) => a.id === id ? { ...a, last_triggered: ts } : a);
+    pushState({ ...base, actions });
+  }
+
   function handleStyleChange(newStyle: OmniStyle) {
     setActiveStyle(newStyle);
     pushStyle(newStyle);
@@ -517,6 +559,7 @@ export default function Dashboard() {
     toggles:  base.toggles.map((t)  => t.id  in pendingValues ? { ...t,  enabled: pendingValues[t.id]  as boolean } : t),
     sliders:  (base.sliders ?? []).map((s) => s.id in pendingValues ? { ...s, value: pendingValues[s.id] as number  } : s),
     services: (base.services ?? []),
+    actions:  (base.actions  ?? []),
   } : null;
 
   function sorted<T extends { id: string }>(items: T[], key: string) {
@@ -607,6 +650,14 @@ export default function Dashboard() {
                   {sid === "files" && (
                     <div className="grid grid-cols-2 gap-3">
                       {sv.files.map((g) => <FileCard key={g.id} group={g} />)}
+                    </div>
+                  )}
+
+                  {sid === "actions" && sv.actions.length > 0 && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {sv.actions.map((a) => (
+                        <ActionButton key={a.id} action={a} onTrigger={handleAction} />
+                      ))}
                     </div>
                   )}
 

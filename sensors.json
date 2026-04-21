@@ -19,5 +19,11 @@
   "files": [
     { "id": "documents", "label": "Mock Files", "items": [] }
   ],
-  "services": []
+  "services": [],
+  "actions": [
+    { "id": "all_lights_off",  "label": "All Lights OFF"  },
+    { "id": "entry_light_on",  "label": "Entry Light ON"  },
+    { "id": "front_lights_on", "label": "Front Lights ON" },
+    { "id": "front_light_off", "label": "Front Light OFF" }
+  ]
 }
