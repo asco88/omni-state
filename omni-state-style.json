@@ -1,0 +1,12 @@
+{
+  "theme": "dark",
+  "accent": "#3b82f6",
+  "font": "sans",
+  "sectionOrder": ["sensors", "controls", "files"],
+  "cardOrder": {
+    "sensors": ["temp_living", "humidity", "cpu", "memory"],
+    "toggles":  ["fan", "lights", "ac", "alarm"],
+    "sliders":  ["volume"],
+    "files":    ["documents"]
+  }
+}

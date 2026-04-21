@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 """
-OmniState agent — watches data.json and relays it to the Vercel cloud UI.
+OmniState agent — bidirectional relay between local files and the Vercel cloud UI.
+
+Watches:
+  - OMNISTATE_FILE      (default: sensors.json)        → /api/update-state
+  - OMNISTATE_STYLE_FILE (default: omni-state-style.json) → /api/update-style
+
+Cloud → local sync:
+  - Polls /api/get-desired-state  every 5 s → writes OMNISTATE_FILE
+  - Polls /api/get-style?desired=1 every 5 s → writes OMNISTATE_STYLE_FILE
+
 Requires: pip install watchdog requests
 """
 
@@ -16,11 +25,13 @@ from watchdog.events import FileModifiedEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
 # ── Config ────────────────────────────────────────────────────────────────────
-VERCEL_URL = os.environ.get("OMNISTATE_URL", "").rstrip("/")
-DATA_FILE = Path(os.environ.get("OMNISTATE_FILE", "data.json"))
-HEARTBEAT_INTERVAL = 30  # seconds
-CLOUD_POLL_INTERVAL = 5   # seconds — how often to check for desired state
-REQUEST_TIMEOUT = 10  # seconds
+
+VERCEL_URL          = os.environ.get("OMNISTATE_URL", "").rstrip("/")
+DATA_FILE           = Path(os.environ.get("OMNISTATE_FILE",       "sensors.json"))
+STYLE_FILE          = Path(os.environ.get("OMNISTATE_STYLE_FILE", "omni-state-style.json"))
+HEARTBEAT_INTERVAL  = 30  # seconds
+CLOUD_POLL_INTERVAL = 5   # seconds
+REQUEST_TIMEOUT     = 10  # seconds
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,81 +40,93 @@ logging.basicConfig(
 )
 log = logging.getLogger("omnistate")
 
+# ── HTTP helpers ──────────────────────────────────────────────────────────────
 
-def post(payload: dict) -> bool:
+def post(path: str, payload: dict) -> bool:
     if not VERCEL_URL:
-        log.error("OMNISTATE_URL is not set. Export it before running.")
+        log.error("OMNISTATE_URL is not set.")
         return False
     try:
-        r = requests.post(
-            f"{VERCEL_URL}/api/update-state",
-            json=payload,
-            timeout=REQUEST_TIMEOUT,
-        )
+        r = requests.post(f"{VERCEL_URL}{path}", json=payload, timeout=REQUEST_TIMEOUT)
         r.raise_for_status()
         return True
     except requests.RequestException as exc:
-        log.warning("POST failed: %s", exc)
+        log.warning("POST %s failed: %s", path, exc)
         return False
 
 
-def send_file() -> None:
+def get_json(path: str) -> dict | None:
     try:
-        text = DATA_FILE.read_text(encoding="utf-8")
-        data = json.loads(text)
+        r = requests.get(f"{VERCEL_URL}{path}", timeout=REQUEST_TIMEOUT)
+        r.raise_for_status()
+        return r.json()
+    except requests.RequestException as exc:
+        log.warning("GET %s failed: %s", path, exc)
+        return None
+
+# ── File sync helpers ─────────────────────────────────────────────────────────
+
+def send_file(file: Path, api_path: str, label: str) -> None:
+    try:
+        data = json.loads(file.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        log.warning("%s not found — skipping", DATA_FILE)
+        log.warning("%s not found — skipping", file)
         return
     except json.JSONDecodeError as exc:
-        log.warning("Invalid JSON in %s: %s", DATA_FILE, exc)
+        log.warning("Invalid JSON in %s: %s", file, exc)
         return
+    if post(api_path, data):
+        log.info("%s synced from %s", label, file)
 
-    if post(data):
-        log.info("State synced from %s", DATA_FILE)
 
+def apply_desired(file: Path, payload: dict, label: str) -> None:
+    file.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    log.info("%s applied from cloud → %s", label, file)
 
-def cloud_sync_loop() -> None:
-    """Poll the cloud for desired-state changes and apply them to data.json."""
-    last_rev: int | None = None
-    while True:
-        try:
-            r = requests.get(
-                f"{VERCEL_URL}/api/get-desired-state",
-                timeout=REQUEST_TIMEOUT,
-            )
-            r.raise_for_status()
-            payload = r.json()
-            rev = payload.get("rev")
-            state = payload.get("state")
-
-            if rev and rev != last_rev and state is not None:
-                DATA_FILE.write_text(
-                    json.dumps(state, indent=2, ensure_ascii=False),
-                    encoding="utf-8",
-                )
-                last_rev = rev
-                log.info("Applied desired state from cloud (rev=%s)", rev)
-        except requests.RequestException as exc:
-            log.warning("Cloud sync poll failed: %s", exc)
-        except Exception as exc:
-            log.warning("Unexpected error in cloud sync: %s", exc)
-
-        time.sleep(CLOUD_POLL_INTERVAL)
-
+# ── Threads ───────────────────────────────────────────────────────────────────
 
 def heartbeat_loop() -> None:
     while True:
-        if post({"type": "heartbeat"}):
-            log.debug("Heartbeat sent")
+        post("/api/update-state", {"type": "heartbeat"})
         time.sleep(HEARTBEAT_INTERVAL)
 
 
-class DataFileHandler(FileSystemEventHandler):
-    def on_modified(self, event: FileModifiedEvent) -> None:
-        if Path(event.src_path).resolve() == DATA_FILE.resolve():
-            log.info("Change detected in %s — syncing…", DATA_FILE)
-            send_file()
+def state_sync_loop() -> None:
+    last_rev: int | None = None
+    while True:
+        data = get_json("/api/get-desired-state")
+        if data:
+            rev, state = data.get("rev"), data.get("state")
+            if rev and rev != last_rev and state is not None:
+                apply_desired(DATA_FILE, state, "State")
+                last_rev = rev
+        time.sleep(CLOUD_POLL_INTERVAL)
 
+
+def style_sync_loop() -> None:
+    last_rev: int | None = None
+    while True:
+        data = get_json("/api/get-style?desired=1")
+        if data:
+            rev, style = data.get("rev"), data.get("style")
+            if rev and rev != last_rev and style is not None:
+                apply_desired(STYLE_FILE, style, "Style")
+                last_rev = rev
+        time.sleep(CLOUD_POLL_INTERVAL)
+
+# ── File watcher ──────────────────────────────────────────────────────────────
+
+class FileHandler(FileSystemEventHandler):
+    def on_modified(self, event: FileModifiedEvent) -> None:
+        path = Path(event.src_path).resolve()
+        if path == DATA_FILE.resolve():
+            log.info("Change detected in %s — syncing…", DATA_FILE.name)
+            send_file(DATA_FILE, "/api/update-state", "State")
+        elif path == STYLE_FILE.resolve():
+            log.info("Change detected in %s — syncing…", STYLE_FILE.name)
+            send_file(STYLE_FILE, "/api/update-style", "Style")
+
+# ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     if not VERCEL_URL:
@@ -113,25 +136,30 @@ def main() -> None:
         )
 
     log.info("OmniState agent starting")
-    log.info("  Watching : %s", DATA_FILE.resolve())
-    log.info("  Target   : %s", VERCEL_URL)
+    log.info("  State file : %s", DATA_FILE.resolve())
+    log.info("  Style file : %s", STYLE_FILE.resolve())
+    log.info("  Target     : %s", VERCEL_URL)
 
-    # Send current state immediately on startup
-    send_file()
+    # Initial sync on startup
+    send_file(DATA_FILE,  "/api/update-state",  "State")
+    send_file(STYLE_FILE, "/api/update-style", "Style")
 
-    # Start heartbeat thread
-    t = threading.Thread(target=heartbeat_loop, daemon=True)
-    t.start()
-    log.info("Heartbeat thread started (every %ds)", HEARTBEAT_INTERVAL)
+    # Start background threads
+    for target, name in [
+        (heartbeat_loop,  "heartbeat"),
+        (state_sync_loop, "state-sync"),
+        (style_sync_loop, "style-sync"),
+    ]:
+        t = threading.Thread(target=target, daemon=True, name=name)
+        t.start()
+        log.info("Thread started: %s", name)
 
-    # Start cloud → local sync thread
-    cs = threading.Thread(target=cloud_sync_loop, daemon=True)
-    cs.start()
-    log.info("Cloud sync thread started (polling every %ds)", CLOUD_POLL_INTERVAL)
-
-    # Start file watcher
+    # Watch both files
     observer = Observer()
-    observer.schedule(DataFileHandler(), path=str(DATA_FILE.parent), recursive=False)
+    watch_dirs = {DATA_FILE.parent.resolve(), STYLE_FILE.parent.resolve()}
+    handler = FileHandler()
+    for d in watch_dirs:
+        observer.schedule(handler, path=str(d), recursive=False)
     observer.start()
     log.info("Watching for file changes… (Ctrl+C to stop)")
 
@@ -141,7 +169,6 @@ def main() -> None:
     except KeyboardInterrupt:
         log.info("Shutting down")
         observer.stop()
-
     observer.join()
 
 

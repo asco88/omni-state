@@ -49,7 +49,6 @@ INITIAL_STATE: dict = {
 def load_state() -> dict:
     try:
         data = json.loads(SENSORS_FILE.read_text(encoding="utf-8"))
-        # Ensure all top-level keys exist (forward-compat with older state)
         for key in ("sensors", "toggles", "sliders", "files"):
             if key not in data:
                 data[key] = INITIAL_STATE[key]

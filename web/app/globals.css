@@ -1,26 +1,30 @@
 @import "tailwindcss";
 
+/* ── OmniState theme tokens ─────────────────────────────────────────────── */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-app:   #030712;
+  --bg-card:  #111827;
+  --bg-input: #374151;
+  --border:   #1f2937;
+  --text-1:   #f9fafb;
+  --text-2:   #9ca3af;
+  --text-3:   #6b7280;
+  --accent:   #3b82f6;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+[data-theme="light"] {
+  --bg-app:   #f8fafc;
+  --bg-card:  #ffffff;
+  --bg-input: #f1f5f9;
+  --border:   #e2e8f0;
+  --text-1:   #0f172a;
+  --text-2:   #475569;
+  --text-3:   #94a3b8;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-app);
+  color: var(--text-1);
+  transition: background-color 0.3s, color 0.3s;
 }
