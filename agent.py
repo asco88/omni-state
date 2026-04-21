@@ -33,6 +33,17 @@ HEARTBEAT_INTERVAL  = 30  # seconds
 CLOUD_POLL_INTERVAL = 5   # seconds
 REQUEST_TIMEOUT     = 10  # seconds
 
+HA_URL   = os.environ.get("HA_URL",   "http://10.0.0.173:8123")
+HA_TOKEN = os.environ.get("HA_TOKEN", "")
+
+# Maps OmniState toggle IDs → HA entity IDs for direct switch control
+HA_SWITCH_ENTITIES: dict[str, str] = {
+    "ha_entry":   "input_boolean.entry_light",
+    "ha_front":   "switch.right_switch_2",
+    "ha_left":    "switch.wifi_smart_switch_switch_2",
+    "ha_parking": "switch.wifi_smart_switch_switch_3",
+}
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -80,8 +91,36 @@ def send_file(file: Path, api_path: str, label: str) -> None:
 
 
 def apply_desired(file: Path, payload: dict, label: str) -> None:
-    file.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    """Merge only controllable fields (toggles, sliders) into existing file.
+    Sensor readings are never overwritten — real_sensors.py owns those."""
+    try:
+        current = json.loads(file.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        current = {}
+    for key in ("toggles", "sliders"):
+        if key in payload:
+            current[key] = payload[key]
+    file.write_text(json.dumps(current, indent=2, ensure_ascii=False), encoding="utf-8")
     log.info("%s applied from cloud → %s", label, file)
+
+
+def call_ha_switch(entity_id: str, on: bool) -> None:
+    if not HA_TOKEN:
+        return
+    domain     = entity_id.split(".")[0]
+    svc_domain = domain if domain in ("switch", "input_boolean", "light") else "switch"
+    service    = "turn_on" if on else "turn_off"
+    try:
+        r = requests.post(
+            f"{HA_URL}/api/services/{svc_domain}/{service}",
+            headers={"Authorization": f"Bearer {HA_TOKEN}", "Content-Type": "application/json"},
+            json={"entity_id": entity_id},
+            timeout=REQUEST_TIMEOUT,
+        )
+        r.raise_for_status()
+        log.info("HA %s → %s", entity_id, "on" if on else "off")
+    except requests.RequestException as exc:
+        log.warning("HA switch %s failed: %s", entity_id, exc)
 
 # ── Threads ───────────────────────────────────────────────────────────────────
 
@@ -91,13 +130,25 @@ def heartbeat_loop() -> None:
         time.sleep(HEARTBEAT_INTERVAL)
 
 
+_last_ha_desired: dict[str, bool] = {}
+
+
 def state_sync_loop() -> None:
     last_rev: int | None = None
     while True:
         data = get_json("/api/get-desired-state")
         if data:
             rev, state = data.get("rev"), data.get("state")
-            if rev and rev != last_rev and state is not None:
+            if rev and rev != last_rev and isinstance(state, dict):
+                # Directly control HA switches — don't rely on sensors.json as intermediary
+                for toggle in state.get("toggles", []):
+                    tid = toggle.get("id", "")
+                    eid = HA_SWITCH_ENTITIES.get(tid)
+                    if eid:
+                        desired = bool(toggle.get("enabled", False))
+                        if _last_ha_desired.get(tid) != desired:
+                            call_ha_switch(eid, desired)
+                            _last_ha_desired[tid] = desired
                 apply_desired(DATA_FILE, state, "State")
                 last_rev = rev
         time.sleep(CLOUD_POLL_INTERVAL)

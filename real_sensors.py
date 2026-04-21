@@ -168,25 +168,6 @@ class HaClient:
             log.debug("HA get_state %s: %s", entity_id, exc)
             return None
 
-    def set_entity(self, entity_id: str, on: bool) -> bool:
-        domain  = entity_id.split(".")[0]
-        service = "turn_on" if on else "turn_off"
-        # lights use light domain, everything else matches domain name
-        svc_domain = domain if domain in ("switch", "input_boolean", "light") else "switch"
-        try:
-            payload = json.dumps({"entity_id": entity_id}).encode()
-            req = urllib.request.Request(
-                f"{self._url}/api/services/{svc_domain}/{service}",
-                data=payload, headers=self._headers(), method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=5):
-                pass
-            log.info("HA %s → %s", entity_id, "on" if on else "off")
-            return True
-        except Exception as exc:
-            log.warning("HA set_entity %s failed: %s", entity_id, exc)
-            return False
-
     def push_sensor(self, entity_id: str, state: str, attributes: dict) -> bool:
         try:
             payload = json.dumps({"state": state, "attributes": attributes}).encode()
@@ -204,40 +185,27 @@ class HaClient:
 
 # ── HA Integration ─────────────────────────────────────────────────────────────
 
-_last_ha_switch: dict[str, bool] = {}
-
-
 def sync_ha_switches(state: dict, ha: HaClient) -> dict:
-    """Read desired toggle state; if UI changed it push to HA; then sync actual HA state back."""
-    sw_map = {oid: eid for oid, eid, _ in HA_SWITCH_MAP}
-    lbl_map = {oid: lbl for oid, _, lbl in HA_SWITCH_MAP}
+    """Read actual HA switch states and write them to sensors.json.
+    Switch control is handled exclusively by agent.py to avoid race conditions."""
+    ha_ids = {oid for oid, _, _ in HA_SWITCH_MAP}
 
-    # Ensure all HA switches exist in toggles list
-    existing = {t["id"] for t in state.get("toggles", [])}
-    for oid, _, lbl in HA_SWITCH_MAP:
-        if oid not in existing:
-            state.setdefault("toggles", []).append({"id": oid, "label": lbl, "enabled": False})
+    # Keep only HA-mapped toggles; drop legacy mock ones
+    state["toggles"] = [t for t in state.get("toggles", []) if t["id"] in ha_ids]
 
-    # Remove non-HA toggles (old mock ones like fan/lights/ac/alarm)
-    state["toggles"] = [t for t in state["toggles"] if t["id"] in sw_map or t["id"] not in
-                        {"fan", "lights", "ac", "alarm"}]
-
-    for toggle in state["toggles"]:
-        tid     = toggle["id"]
-        eid     = sw_map.get(tid)
-        if not eid:
-            continue
-        desired    = toggle["enabled"]
-        last_known = _last_ha_switch.get(tid)
-
-        if last_known is not None and desired != last_known:
-            ha.set_entity(eid, desired)
-
+    existing = {t["id"] for t in state["toggles"]}
+    for oid, eid, lbl in HA_SWITCH_MAP:
         raw = ha.get_state(eid)
-        if raw is not None:
-            actual = raw == "on"
-            toggle["enabled"] = actual
-            _last_ha_switch[tid] = actual
+        if raw is None:
+            continue
+        actual = raw == "on"
+        if oid in existing:
+            for t in state["toggles"]:
+                if t["id"] == oid:
+                    t["enabled"] = actual
+        else:
+            state["toggles"].append({"id": oid, "label": lbl, "enabled": actual})
+            existing.add(oid)
 
     return state
 
