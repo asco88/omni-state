@@ -1,0 +1,24 @@
+{
+  "sensors": [
+    { "id": "temp_living", "label": "Living Room Temp", "value": 22.0, "unit": "°C", "min": 0,  "max": 50  },
+    { "id": "humidity",    "label": "Humidity",          "value": 65.0, "unit": "%",  "min": 0,  "max": 100 },
+    { "id": "cpu",         "label": "CPU Usage",         "value": 30.0, "unit": "%",  "min": 0,  "max": 100 },
+    { "id": "memory",      "label": "Memory Usage",      "value": 55.0, "unit": "%",  "min": 0,  "max": 100 }
+  ],
+  "toggles": [
+    { "id": "fan",    "label": "Fan",              "enabled": false },
+    { "id": "lights", "label": "Lights",           "enabled": true  },
+    { "id": "ac",     "label": "Air Conditioning", "enabled": false },
+    { "id": "alarm",  "label": "Alarm",            "enabled": false }
+  ],
+  "sliders": [
+    { "id": "volume", "label": "Master Volume", "value": 65, "min": 0, "max": 100, "unit": "%" }
+  ],
+  "files": [
+    {
+      "id": "documents",
+      "label": "Mock Files",
+      "items": []
+    }
+  ]
+}
