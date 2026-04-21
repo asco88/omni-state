@@ -91,15 +91,16 @@ def send_file(file: Path, api_path: str, label: str) -> None:
 
 
 def apply_desired(file: Path, payload: dict, label: str) -> None:
-    """Merge only controllable fields (toggles, sliders) into existing file.
-    Sensor readings are never overwritten — real_sensors.py owns those."""
+    """Merge only sliders into the existing file.
+    - Sensors: owned exclusively by real_sensors.py (live readings).
+    - Toggles: agent calls HA directly; real_sensors.py reflects actual HA state.
+    - Sliders: user preference with no external source, so we persist it here."""
     try:
         current = json.loads(file.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError):
         current = {}
-    for key in ("toggles", "sliders"):
-        if key in payload:
-            current[key] = payload[key]
+    if "sliders" in payload:
+        current["sliders"] = payload["sliders"]
     file.write_text(json.dumps(current, indent=2, ensure_ascii=False), encoding="utf-8")
     log.info("%s applied from cloud → %s", label, file)
 
