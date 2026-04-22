@@ -1,10 +1,12 @@
 import { kv } from "@vercel/kv";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { userKeys } from "@/lib/kv-user";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const keys = userKeys(session.user.email);
 
   let body: unknown;
   try {
@@ -14,6 +16,6 @@ export async function POST(req: NextRequest) {
   }
 
   const rev = Date.now();
-  await kv.mset({ desired_state: body, desired_state_rev: rev });
+  await kv.mset({ [keys.desiredState]: body, [keys.desiredStateRev]: rev });
   return NextResponse.json({ ok: true, rev });
 }

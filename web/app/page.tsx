@@ -702,6 +702,106 @@ function ServicesCard({ services }: { services: Service[] }) {
   );
 }
 
+// ── Server Setup panel ────────────────────────────────────────────────────────
+
+function ServerSetupPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [token, setToken]     = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [shown, setShown]     = useState(false);
+  const [copied, setCopied]   = useState(false);
+  const [regen, setRegen]     = useState(false);
+
+  useEffect(() => {
+    if (!open || token !== null) return;
+    setLoading(true);
+    fetch("/api/token").then(r => r.json()).then(d => { setToken(d.token ?? null); setLoading(false); });
+  }, [open, token]);
+
+  async function regenerate() {
+    if (!confirm("Regenerate token? The old token will stop working immediately.")) return;
+    setLoading(true); setRegen(true);
+    const d = await fetch("/api/token", { method: "POST" }).then(r => r.json());
+    setToken(d.token ?? null);
+    setLoading(false); setRegen(false); setShown(true);
+  }
+
+  function copy() {
+    if (!token) return;
+    navigator.clipboard.writeText(token);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  const origin  = typeof window !== "undefined" ? window.location.origin : "https://omni-state.vercel.app";
+  const masked  = token ? `${token.slice(0, 8)}${"·".repeat(20)}${token.slice(-4)}` : "—";
+  const display = loading ? "Loading…" : (shown && token ? token : masked);
+
+  const configSnippet = `{\n  "vercel_url": "${origin}",\n  "api_key": "${shown && token ? token : "<paste-token-here>"}"\n}`;
+
+  return (
+    <>
+      {open && <div className="fixed inset-0 z-40" onClick={onClose} />}
+      <div className={`fixed top-0 right-0 h-full w-80 z-50 flex flex-col shadow-2xl transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-full"}`}
+        style={{ backgroundColor: "var(--bg-card)", borderLeft: "1px solid var(--border)" }}>
+
+        <div className="flex items-center justify-between px-6 py-5 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
+          <span className="font-semibold text-sm" style={{ color: "var(--text-1)" }}>Server Setup</span>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-sm" style={{ color: "var(--text-2)", backgroundColor: "var(--bg-input)" }}>✕</button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-5">
+          <p className="text-xs leading-relaxed" style={{ color: "var(--text-3)" }}>
+            Install <code className="px-1 rounded" style={{ backgroundColor: "var(--bg-input)" }}>agent.py</code> and <code className="px-1 rounded" style={{ backgroundColor: "var(--bg-input)" }}>real_sensors.py</code> on your home server, then point them at this deployment using the token below.
+          </p>
+
+          {/* Token */}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>API Token</span>
+            <div className="rounded-xl px-3 py-2.5 border font-mono text-xs break-all select-all" style={{ backgroundColor: "var(--bg-input)", borderColor: "var(--border)", color: "var(--text-2)" }}>
+              {display}
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              <button onClick={() => setShown(s => !s)} className="py-1.5 rounded-lg text-xs transition-opacity hover:opacity-80" style={{ backgroundColor: "var(--bg-input)", color: "var(--text-2)" }}>
+                {shown ? "Hide" : "Show"}
+              </button>
+              <button onClick={copy} className="py-1.5 rounded-lg text-xs transition-opacity hover:opacity-80" style={{ backgroundColor: "var(--bg-input)", color: copied ? "#22c55e" : "var(--text-2)" }}>
+                {copied ? "Copied!" : "Copy"}
+              </button>
+              <button onClick={regenerate} disabled={regen} className="py-1.5 rounded-lg text-xs transition-opacity hover:opacity-80 disabled:opacity-40" style={{ backgroundColor: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
+                {regen ? "…" : "Regen"}
+              </button>
+            </div>
+            {token === null && !loading && (
+              <p className="text-xs" style={{ color: "#f59e0b" }}>No token yet — click Regen to create one.</p>
+            )}
+          </div>
+
+          {/* config.json snippet */}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>config.json</span>
+            <pre className="rounded-xl px-3 py-2.5 border text-xs overflow-x-auto whitespace-pre-wrap break-all leading-relaxed" style={{ backgroundColor: "var(--bg-input)", borderColor: "var(--border)", color: "#86efac" }}>
+              {configSnippet}
+            </pre>
+            <p className="text-xs" style={{ color: "var(--text-3)" }}>
+              Place this file next to <code className="px-1 rounded" style={{ backgroundColor: "var(--bg-input)" }}>agent.py</code> on your server.
+            </p>
+          </div>
+
+          {/* Quick start */}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Quick Start</span>
+            <pre className="rounded-xl px-3 py-2.5 border text-xs leading-relaxed" style={{ backgroundColor: "var(--bg-input)", borderColor: "var(--border)", color: "#86efac" }}>
+{`pip install watchdog requests
+python3 real_sensors.py &
+python3 agent.py`}
+            </pre>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ── Settings panel ────────────────────────────────────────────────────────────
 
 function SettingsPanel({ open, onClose, style, onChange }: {
@@ -782,6 +882,7 @@ export default function Dashboard() {
   const [settingsOpen, setSettings]        = useState(false);
   const [integrationsOpen, setIntegrations] = useState(false);
   const [editMode, setEditMode]            = useState(false);
+  const [serverSetupOpen, setServerSetup]  = useState(false);
 
   // Apply CSS variables + font whenever style changes
   useEffect(() => {
@@ -963,6 +1064,7 @@ export default function Dashboard() {
   return (
     <main className="min-h-screen flex flex-col items-center p-6 gap-6 transition-colors duration-300" style={{ backgroundColor: "var(--bg-app)", color: "var(--text-1)" }}>
 
+      <ServerSetupPanel open={serverSetupOpen} onClose={() => setServerSetup(false)} />
       <SettingsPanel open={settingsOpen} onClose={() => setSettings(false)} style={activeStyle} onChange={handleStyleChange} />
       <IntegrationsPanel
         open={integrationsOpen} onClose={() => setIntegrations(false)}
@@ -992,6 +1094,14 @@ export default function Dashboard() {
             title="Edit layout"
           >
             {editMode ? "✓ Done" : "Edit"}
+          </button>
+          <button
+            onClick={() => setServerSetup(true)}
+            className="p-2.5 rounded-xl border transition-colors"
+            style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-2)" }}
+            title="Server setup"
+          >
+            🔑
           </button>
           <button
             onClick={() => setIntegrations(true)}

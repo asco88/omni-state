@@ -1,10 +1,12 @@
 import { kv } from "@vercel/kv";
 import { NextRequest, NextResponse } from "next/server";
-import { checkAgentKey } from "@/lib/agent-auth";
+import { resolveAgentEmail } from "@/lib/agent-auth";
+import { userKeys } from "@/lib/kv-user";
 
 export async function POST(req: NextRequest) {
-  const denied = checkAgentKey(req);
-  if (denied) return denied;
+  const result = await resolveAgentEmail(req);
+  if (result instanceof NextResponse) return result;
+  const keys = userKeys(result.email);
 
   let body: unknown;
   try {
@@ -14,17 +16,20 @@ export async function POST(req: NextRequest) {
   }
 
   const isHeartbeat =
-    typeof body === "object" &&
-    body !== null &&
+    typeof body === "object" && body !== null &&
     (body as Record<string, unknown>).type === "heartbeat";
 
   const now = Date.now();
 
   if (isHeartbeat) {
-    await kv.set("server_last_seen", now);
+    await kv.set(keys.serverLastSeen, now);
     return NextResponse.json({ ok: true, type: "heartbeat" });
   }
 
-  await kv.mset({ state_data: body, state_updated_at: now, server_last_seen: now });
+  await kv.mset({
+    [keys.stateData]:      body,
+    [keys.stateUpdatedAt]: now,
+    [keys.serverLastSeen]: now,
+  });
   return NextResponse.json({ ok: true, type: "state_update" });
 }
