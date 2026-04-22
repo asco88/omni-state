@@ -1,7 +1,11 @@
 import { kv } from "@vercel/kv";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { checkAgentKey } from "@/lib/agent-auth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const denied = checkAgentKey(req);
+  if (denied) return denied;
+
   const [state, rev] = await Promise.all([
     kv.get<unknown>("desired_state"),
     kv.get<number>("desired_state_rev"),

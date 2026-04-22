@@ -1,18 +1,26 @@
 import { kv } from "@vercel/kv";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { checkAgentKey } from "@/lib/agent-auth";
 
-// GET /api/get-style — used by UI (reads style_data)
-// GET /api/get-style?desired=1 — used by agent (reads desired_style + rev)
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
+  const isAgentRequest = searchParams.get("desired") === "1";
 
-  if (searchParams.get("desired") === "1") {
+  if (isAgentRequest) {
+    const denied = checkAgentKey(req);
+    if (denied) return denied;
+
     const [style, rev] = await Promise.all([
       kv.get<unknown>("desired_style"),
       kv.get<number>("desired_style_rev"),
     ]);
     return NextResponse.json({ style: style ?? null, rev: rev ?? null });
   }
+
+  // Browser request — require session
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const [style, updatedAt] = await Promise.all([
     kv.get<unknown>("style_data"),

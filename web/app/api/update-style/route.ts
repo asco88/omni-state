@@ -1,8 +1,11 @@
 import { kv } from "@vercel/kv";
 import { NextRequest, NextResponse } from "next/server";
+import { checkAgentKey } from "@/lib/agent-auth";
 
-// Called by the agent when omni-state-style.json changes on the server.
 export async function POST(req: NextRequest) {
+  const denied = checkAgentKey(req);
+  if (denied) return denied;
+
   let body: unknown;
   try {
     body = await req.json();

@@ -1,5 +1,6 @@
 {
   "vercel_url": "https://your-project.vercel.app",
+  "api_key":    "GENERATE_WITH_SETUP_SH",
   "ha_url":     "http://homeassistant.local:8123",
   "ha_token":   "YOUR_LONG_LIVED_ACCESS_TOKEN"
 }

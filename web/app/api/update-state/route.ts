@@ -1,7 +1,11 @@
 import { kv } from "@vercel/kv";
 import { NextRequest, NextResponse } from "next/server";
+import { checkAgentKey } from "@/lib/agent-auth";
 
 export async function POST(req: NextRequest) {
+  const denied = checkAgentKey(req);
+  if (denied) return denied;
+
   let body: unknown;
   try {
     body = await req.json();
@@ -21,11 +25,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, type: "heartbeat" });
   }
 
-  await kv.mset({
-    state_data: body,
-    state_updated_at: now,
-    server_last_seen: now,
-  });
-
+  await kv.mset({ state_data: body, state_updated_at: now, server_last_seen: now });
   return NextResponse.json({ ok: true, type: "state_update" });
 }

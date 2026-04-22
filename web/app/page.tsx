@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { signOut } from "next-auth/react";
 import {
   DndContext,
   DragEndEvent,
@@ -877,6 +878,14 @@ export default function Dashboard() {
             title="Appearance settings"
           >
             ⚙️
+          </button>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="p-2.5 rounded-xl border transition-colors text-sm"
+            style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-3)" }}
+            title="Sign out"
+          >
+            ↩
           </button>
         </div>
       </div>

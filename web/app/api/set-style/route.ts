@@ -1,8 +1,11 @@
 import { kv } from "@vercel/kv";
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 
-// Called by the UI when the user changes appearance settings.
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   let body: unknown;
   try {
     body = await req.json();

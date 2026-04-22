@@ -40,6 +40,7 @@ def _get(env_key: str, cfg_key: str, default: str = "") -> str:
     return os.environ.get(env_key) or _cfg.get(cfg_key, default)
 
 VERCEL_URL          = _get("OMNISTATE_URL", "vercel_url").rstrip("/")
+API_KEY             = _get("OMNISTATE_API_KEY", "api_key", "")
 DATA_FILE           = Path(os.environ.get("OMNISTATE_FILE",       "sensors.json"))
 STYLE_FILE          = Path(os.environ.get("OMNISTATE_STYLE_FILE", "omni-state-style.json"))
 HEARTBEAT_INTERVAL  = 30  # seconds
@@ -76,12 +77,19 @@ log = logging.getLogger("omnistate")
 
 # ── HTTP helpers ──────────────────────────────────────────────────────────────
 
+def _agent_headers() -> dict:
+    h = {"Content-Type": "application/json"}
+    if API_KEY:
+        h["Authorization"] = f"Bearer {API_KEY}"
+    return h
+
+
 def post(path: str, payload: dict) -> bool:
     if not VERCEL_URL:
         log.error("OMNISTATE_URL is not set.")
         return False
     try:
-        r = requests.post(f"{VERCEL_URL}{path}", json=payload, timeout=REQUEST_TIMEOUT)
+        r = requests.post(f"{VERCEL_URL}{path}", json=payload, headers=_agent_headers(), timeout=REQUEST_TIMEOUT)
         r.raise_for_status()
         return True
     except requests.RequestException as exc:
@@ -91,7 +99,7 @@ def post(path: str, payload: dict) -> bool:
 
 def get_json(path: str) -> dict | None:
     try:
-        r = requests.get(f"{VERCEL_URL}{path}", timeout=REQUEST_TIMEOUT)
+        r = requests.get(f"{VERCEL_URL}{path}", headers=_agent_headers(), timeout=REQUEST_TIMEOUT)
         r.raise_for_status()
         return r.json()
     except requests.RequestException as exc:
