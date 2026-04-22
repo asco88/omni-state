@@ -4,6 +4,11 @@ __pycache__/
 *.pyo
 .env
 
+# OmniState runtime files — contain real tokens and live data, never commit
+config.json
+sensors.json
+omni-state-style.json
+
 # Node / Next.js
 web/node_modules/
 web/.next/
