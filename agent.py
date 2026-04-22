@@ -26,15 +26,28 @@ from watchdog.observers import Observer
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-VERCEL_URL          = os.environ.get("OMNISTATE_URL", "").rstrip("/")
+def _load_config() -> dict:
+    """Load config.json from the script's directory (env vars take precedence)."""
+    cfg_file = Path(__file__).parent / "config.json"
+    try:
+        return json.loads(cfg_file.read_text()) if cfg_file.exists() else {}
+    except Exception:
+        return {}
+
+_cfg = _load_config()
+
+def _get(env_key: str, cfg_key: str, default: str = "") -> str:
+    return os.environ.get(env_key) or _cfg.get(cfg_key, default)
+
+VERCEL_URL          = _get("OMNISTATE_URL", "vercel_url").rstrip("/")
 DATA_FILE           = Path(os.environ.get("OMNISTATE_FILE",       "sensors.json"))
 STYLE_FILE          = Path(os.environ.get("OMNISTATE_STYLE_FILE", "omni-state-style.json"))
 HEARTBEAT_INTERVAL  = 30  # seconds
 CLOUD_POLL_INTERVAL = 5   # seconds
 REQUEST_TIMEOUT     = 10  # seconds
 
-HA_URL   = os.environ.get("HA_URL",   "http://10.0.0.173:8123")
-HA_TOKEN = os.environ.get("HA_TOKEN", "")
+HA_URL   = _get("HA_URL",   "ha_url",   "http://homeassistant.local:8123")
+HA_TOKEN = _get("HA_TOKEN", "ha_token", "")
 
 # Maps OmniState toggle IDs → HA entity IDs for direct switch control
 HA_SWITCH_ENTITIES: dict[str, str] = {

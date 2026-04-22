@@ -16,13 +16,26 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+def _load_config() -> dict:
+    """Load config.json from the script's directory (env vars take precedence)."""
+    cfg_file = Path(__file__).parent / "config.json"
+    try:
+        return json.loads(cfg_file.read_text()) if cfg_file.exists() else {}
+    except Exception:
+        return {}
+
+_cfg = _load_config()
+
+def _get(env_key: str, cfg_key: str, default: str = "") -> str:
+    return os.environ.get(env_key) or _cfg.get(cfg_key, default)
+
 SENSORS_FILE = Path(os.environ.get("OMNISTATE_FILE", "sensors.json"))
 FILES_DIR    = SENSORS_FILE.parent / "mock-files"
 NET_IFACE    = os.environ.get("OMNISTATE_NET_IFACE", "ens18")
 INTERVAL     = 5
 
-HA_URL   = os.environ.get("HA_URL",   "http://10.0.0.173:8123")
-HA_TOKEN = os.environ.get("HA_TOKEN", "")
+HA_URL   = _get("HA_URL",   "ha_url",   "http://homeassistant.local:8123")
+HA_TOKEN = _get("HA_TOKEN", "ha_token", "")
 
 logging.basicConfig(
     level=logging.INFO,
