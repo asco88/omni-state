@@ -59,6 +59,7 @@ type OmniStyle = {
   cardOrder: Record<string, string[]>;
   pinnedDevices: string[];
   deviceNames: Record<string, string>;
+  hiddenSections: string[];
 };
 
 type SensorsState = {
@@ -102,6 +103,7 @@ const DEFAULT_STYLE: OmniStyle = {
   },
   pinnedDevices: [],
   deviceNames: {},
+  hiddenSections: [],
 };
 
 const SECTION_LABELS: Record<string, string> = {
@@ -135,8 +137,9 @@ function mergeStyle(saved?: OmniStyle): OmniStyle {
   const merged = {
     ...DEFAULT_STYLE, ...saved,
     cardOrder:     { ...DEFAULT_STYLE.cardOrder, ...saved.cardOrder },
-    pinnedDevices: saved.pinnedDevices ?? DEFAULT_STYLE.pinnedDevices,
-    deviceNames:   saved.deviceNames   ?? DEFAULT_STYLE.deviceNames,
+    pinnedDevices:  saved.pinnedDevices  ?? DEFAULT_STYLE.pinnedDevices,
+    deviceNames:    saved.deviceNames    ?? DEFAULT_STYLE.deviceNames,
+    hiddenSections: saved.hiddenSections ?? DEFAULT_STYLE.hiddenSections,
   };
   for (const s of DEFAULT_STYLE.sectionOrder) {
     if (!merged.sectionOrder.includes(s)) merged.sectionOrder = [...merged.sectionOrder, s];
@@ -204,31 +207,45 @@ function GripIcon() {
 
 type DragRender = (p: { dragHandleProps: Record<string, unknown> }) => React.ReactNode;
 
-function SortableCard({ id, children }: { id: string; children: DragRender }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+function SortableCard({ id, editMode, children }: { id: string; editMode: boolean; children: DragRender }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: !editMode });
   return (
-    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}>
-      {children({ dragHandleProps: { ...attributes, ...listeners } })}
+    <div ref={setNodeRef} style={{ transform: editMode ? CSS.Transform.toString(transform) : undefined, transition: editMode ? transition : undefined, opacity: isDragging ? 0.4 : 1 }}>
+      {children({ dragHandleProps: editMode ? { ...attributes, ...listeners } : {} })}
     </div>
   );
 }
 
-function SortableSection({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+function SortableSection({ id, title, editMode, onHide, children }: {
+  id: string; title: string; editMode: boolean; onHide: () => void; children: React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: !editMode });
   return (
-    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}>
+    <div ref={setNodeRef} style={{ transform: editMode ? CSS.Transform.toString(transform) : undefined, transition: editMode ? transition : undefined, opacity: isDragging ? 0.4 : 1 }}>
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>
           {title}
         </h2>
-        <button
-          {...attributes} {...listeners}
-          className="p-1.5 rounded cursor-grab active:cursor-grabbing transition-opacity opacity-40 hover:opacity-100"
-          style={{ color: "var(--text-2)" }}
-          title="Drag to reorder section"
-        >
-          <GripIcon />
-        </button>
+        {editMode && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onHide}
+              className="px-2 py-1 rounded text-xs transition-opacity opacity-60 hover:opacity-100"
+              style={{ color: "var(--text-2)", backgroundColor: "var(--bg-input)" }}
+              title="Hide section"
+            >
+              Hide
+            </button>
+            <button
+              {...attributes} {...listeners}
+              className="p-1.5 rounded cursor-grab active:cursor-grabbing transition-opacity opacity-40 hover:opacity-100"
+              style={{ color: "var(--text-2)" }}
+              title="Drag to reorder"
+            >
+              <GripIcon />
+            </button>
+          </div>
+        )}
       </div>
       {children}
     </div>
@@ -237,12 +254,12 @@ function SortableSection({ id, title, children }: { id: string; title: string; c
 
 // ── Components ────────────────────────────────────────────────────────────────
 
-function SensorCard({ sensor, dragHandleProps }: { sensor: Sensor; dragHandleProps: Record<string, unknown> }) {
+function SensorCard({ sensor, dragHandleProps, editMode }: { sensor: Sensor; dragHandleProps: Record<string, unknown>; editMode: boolean }) {
   const ratio = (sensor.value - sensor.min) / (sensor.max - sensor.min);
   const color = valueColor(ratio);
   return (
     <div
-      className="rounded-xl p-4 flex flex-col gap-3 border cursor-grab active:cursor-grabbing select-none"
+      className={`rounded-xl p-4 flex flex-col gap-3 border select-none ${editMode ? "cursor-grab active:cursor-grabbing" : ""}`}
       style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}
       {...dragHandleProps}
     >
@@ -262,18 +279,20 @@ function SensorCard({ sensor, dragHandleProps }: { sensor: Sensor; dragHandlePro
 }
 
 function ToggleSwitch({
-  toggle, onToggle, dragHandleProps,
-}: { toggle: Toggle; onToggle: (id: string) => void; dragHandleProps: Record<string, unknown> }) {
+  toggle, onToggle, dragHandleProps, editMode,
+}: { toggle: Toggle; onToggle: (id: string) => void; dragHandleProps: Record<string, unknown>; editMode: boolean }) {
   return (
     <div className="rounded-xl p-4 flex items-center justify-between border" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
       <div className="flex items-center gap-2 min-w-0">
-        <span
-          className="cursor-grab active:cursor-grabbing flex-shrink-0 opacity-40 hover:opacity-100 transition-opacity"
-          style={{ color: "var(--text-2)" }}
-          {...dragHandleProps}
-        >
-          <GripIcon />
-        </span>
+        {editMode && (
+          <span
+            className="cursor-grab active:cursor-grabbing flex-shrink-0 opacity-40 hover:opacity-100 transition-opacity"
+            style={{ color: "var(--text-2)" }}
+            {...dragHandleProps}
+          >
+            <GripIcon />
+          </span>
+        )}
         <span className="text-sm font-medium truncate" style={{ color: "var(--text-1)" }}>{toggle.label}</span>
       </div>
       <button onClick={() => onToggle(toggle.id)} className="flex-shrink-0 ml-2">
@@ -762,6 +781,7 @@ export default function Dashboard() {
   const [activeStyle, setActiveStyle]      = useState<OmniStyle>(DEFAULT_STYLE);
   const [settingsOpen, setSettings]        = useState(false);
   const [integrationsOpen, setIntegrations] = useState(false);
+  const [editMode, setEditMode]            = useState(false);
 
   // Apply CSS variables + font whenever style changes
   useEffect(() => {
@@ -881,6 +901,16 @@ export default function Dashboard() {
     pushStyle(newStyle);
   }
 
+  function hideSection(sid: string) {
+    const hidden = [...(activeStyle.hiddenSections ?? [])];
+    if (!hidden.includes(sid)) hidden.push(sid);
+    handleStyleChange({ ...activeStyle, hiddenSections: hidden });
+  }
+
+  function showSection(sid: string) {
+    handleStyleChange({ ...activeStyle, hiddenSections: (activeStyle.hiddenSections ?? []).filter(s => s !== sid) });
+  }
+
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 8 } }),
@@ -952,6 +982,18 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-2 mt-1">
           <button
+            onClick={() => setEditMode(e => !e)}
+            className="px-3 py-2 rounded-xl border text-xs font-medium transition-all"
+            style={{
+              backgroundColor: editMode ? "var(--accent)" : "var(--bg-card)",
+              borderColor: editMode ? "var(--accent)" : "var(--border)",
+              color: editMode ? "#fff" : "var(--text-2)",
+            }}
+            title="Edit layout"
+          >
+            {editMode ? "✓ Done" : "Edit"}
+          </button>
+          <button
             onClick={() => setIntegrations(true)}
             className="relative p-2.5 rounded-xl border transition-colors"
             style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-2)" }}
@@ -1007,24 +1049,27 @@ export default function Dashboard() {
       {sv ? (
         <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           {(() => {
-            const active = new Set(activeSections(sv, activeStyle.pinnedDevices ?? []));
-            const visible = [
+            const allActive    = activeSections(sv, activeStyle.pinnedDevices ?? []);
+            const hiddenSet    = new Set(activeStyle.hiddenSections ?? []);
+            const active       = new Set(allActive.filter(s => !hiddenSet.has(s)));
+            const visible      = [
               ...activeStyle.sectionOrder.filter((s) => active.has(s)),
               ...[...active].filter((s) => !activeStyle.sectionOrder.includes(s)),
             ];
+            const hiddenWithData = allActive.filter(s => hiddenSet.has(s));
             return (
           <SortableContext items={visible.map((s) => `section:${s}`)} strategy={verticalListSortingStrategy}>
             <div className="w-full max-w-2xl flex flex-col gap-6">
 
               {visible.map((sid) => (
-                <SortableSection key={sid} id={`section:${sid}`} title={SECTION_LABELS[sid] ?? sid}>
+                <SortableSection key={sid} id={`section:${sid}`} title={SECTION_LABELS[sid] ?? sid} editMode={editMode} onHide={() => hideSection(sid)}>
 
                   {sid === "sensors" && (
                     <SortableContext items={activeStyle.cardOrder.sensors.map((id) => `sensor:${id}`)} strategy={rectSortingStrategy}>
                       <div className="grid grid-cols-2 gap-3">
                         {sorted(sv.sensors, "sensors").map((s) => (
-                          <SortableCard key={s.id} id={`sensor:${s.id}`}>
-                            {({ dragHandleProps }) => <SensorCard sensor={s} dragHandleProps={dragHandleProps} />}
+                          <SortableCard key={s.id} id={`sensor:${s.id}`} editMode={editMode}>
+                            {({ dragHandleProps }) => <SensorCard sensor={s} dragHandleProps={dragHandleProps} editMode={editMode} />}
                           </SortableCard>
                         ))}
                       </div>
@@ -1041,8 +1086,8 @@ export default function Dashboard() {
                     <SortableContext items={activeStyle.cardOrder.toggles.map((id) => `toggle:${id}`)} strategy={rectSortingStrategy}>
                       <div className="grid grid-cols-2 gap-3 relative">
                         {sorted(sv.toggles, "toggles").map((t) => (
-                          <SortableCard key={t.id} id={`toggle:${t.id}`}>
-                            {({ dragHandleProps }) => <ToggleSwitch toggle={t} onToggle={handleToggle} dragHandleProps={dragHandleProps} />}
+                          <SortableCard key={t.id} id={`toggle:${t.id}`} editMode={editMode}>
+                            {({ dragHandleProps }) => <ToggleSwitch toggle={t} onToggle={handleToggle} dragHandleProps={dragHandleProps} editMode={editMode} />}
                           </SortableCard>
                         ))}
                         {sv.sliders.map((s) => (
@@ -1085,6 +1130,23 @@ export default function Dashboard() {
 
                 </SortableSection>
               ))}
+
+              {editMode && hiddenWithData.length > 0 && (
+                <div className="rounded-xl p-4 border flex flex-wrap items-center gap-2" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
+                  <span className="text-xs font-semibold uppercase tracking-widest mr-1" style={{ color: "var(--text-3)" }}>Hidden</span>
+                  {hiddenWithData.map(sid => (
+                    <button
+                      key={sid}
+                      onClick={() => showSection(sid)}
+                      className="px-3 py-1 rounded-lg text-xs font-medium transition-all hover:opacity-80 active:scale-95"
+                      style={{ backgroundColor: "var(--bg-input)", color: "var(--text-2)", border: "1px solid var(--border)" }}
+                    >
+                      + {SECTION_LABELS[sid] ?? sid}
+                    </button>
+                  ))}
+                </div>
+              )}
+
             </div>
           </SortableContext>
             );
