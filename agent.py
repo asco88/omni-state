@@ -115,6 +115,21 @@ def apply_desired(file: Path, payload: dict, label: str) -> None:
     log.info("%s applied from cloud → %s", label, file)
 
 
+_STYLE_KEYS = ("theme", "accent", "font", "sectionOrder", "cardOrder", "pinnedDevices", "deviceNames")
+
+def apply_desired_style(file: Path, payload: dict) -> None:
+    """Write all UI preference fields from desired_style to the style file."""
+    try:
+        current = json.loads(file.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        current = {}
+    for key in _STYLE_KEYS:
+        if key in payload:
+            current[key] = payload[key]
+    file.write_text(json.dumps(current, indent=2, ensure_ascii=False), encoding="utf-8")
+    log.info("Style applied from cloud → %s", file)
+
+
 def call_ha_automation(entity_id: str) -> None:
     if not HA_TOKEN:
         return
@@ -151,6 +166,29 @@ def call_ha_switch(entity_id: str, on: bool) -> None:
     except requests.RequestException as exc:
         log.warning("HA switch %s failed: %s", entity_id, exc)
 
+
+HA_CMD_FRESHNESS_MS = 30_000  # ignore ha_command older than 30 s
+
+def call_ha_service(entity_id: str, service: str) -> None:
+    """Call an arbitrary HA service for the device browser."""
+    if not HA_TOKEN:
+        return
+    domain = entity_id.split(".")[0]
+    svc_parts = service.split(".")
+    svc_domain  = svc_parts[0] if len(svc_parts) > 1 else domain
+    svc_name    = svc_parts[-1]
+    try:
+        r = requests.post(
+            f"{HA_URL}/api/services/{svc_domain}/{svc_name}",
+            headers={"Authorization": f"Bearer {HA_TOKEN}", "Content-Type": "application/json"},
+            json={"entity_id": entity_id},
+            timeout=REQUEST_TIMEOUT,
+        )
+        r.raise_for_status()
+        log.info("HA service %s/%s → %s", svc_domain, svc_name, entity_id)
+    except requests.RequestException as exc:
+        log.warning("HA service %s/%s %s failed: %s", svc_domain, svc_name, entity_id, exc)
+
 # ── Threads ───────────────────────────────────────────────────────────────────
 
 def heartbeat_loop() -> None:
@@ -161,6 +199,7 @@ def heartbeat_loop() -> None:
 
 _last_ha_desired: dict[str, bool] = {}
 _last_trigger_times: dict[str, int] = {}
+_last_ha_cmd_ts: int = 0
 
 
 def state_sync_loop() -> None:
@@ -191,6 +230,18 @@ def state_sync_loop() -> None:
                             call_ha_automation(eid)
                         _last_trigger_times[aid] = ts
 
+                # HA device browser commands
+                global _last_ha_cmd_ts
+                ha_cmd = state.get("ha_command")
+                if ha_cmd and isinstance(ha_cmd, dict):
+                    ts  = ha_cmd.get("ts", 0)
+                    eid = ha_cmd.get("entity_id", "")
+                    svc = ha_cmd.get("service", "")
+                    now_ms = time.time() * 1000
+                    if eid and svc and ts != _last_ha_cmd_ts and (now_ms - ts) < HA_CMD_FRESHNESS_MS:
+                        call_ha_service(eid, svc)
+                    _last_ha_cmd_ts = ts
+
                 apply_desired(DATA_FILE, state, "State")
                 last_rev = rev
         time.sleep(CLOUD_POLL_INTERVAL)
@@ -203,7 +254,7 @@ def style_sync_loop() -> None:
         if data:
             rev, style = data.get("rev"), data.get("style")
             if rev and rev != last_rev and style is not None:
-                apply_desired(STYLE_FILE, style, "Style")
+                apply_desired_style(STYLE_FILE, style)
                 last_rev = rev
         time.sleep(CLOUD_POLL_INTERVAL)
 

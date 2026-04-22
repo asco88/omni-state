@@ -29,21 +29,33 @@ type FileGroup = { id: string; label: string; items: FileItem[] };
 type Service   = { id: string; label: string; active: boolean };
 type Action    = { id: string; label: string; last_triggered?: number | null };
 
+type HaDevice = {
+  id: string; name: string; state: string;
+  unit?: string;
+  media_title?: string; media_artist?: string; volume?: number;
+  brightness?: number;
+};
+type HaDevices = Record<string, HaDevice[]>;
+
 type OmniStyle = {
   theme: "dark" | "light";
   accent: string;
   font: "sans" | "mono";
   sectionOrder: string[];
   cardOrder: Record<string, string[]>;
+  pinnedDevices: string[];
+  deviceNames: Record<string, string>;
 };
 
 type SensorsState = {
-  sensors:  Sensor[];
-  toggles:  Toggle[];
-  sliders:  Slider[];
-  files:    FileGroup[];
-  services: Service[];
-  actions:  Action[];
+  sensors:    Sensor[];
+  toggles:    Toggle[];
+  sliders:    Slider[];
+  files:      FileGroup[];
+  services:   Service[];
+  actions:    Action[];
+  ha_devices?: HaDevices;
+  ha_command?: { entity_id: string; service: string; ts: number };
 };
 
 interface StatePayload {
@@ -65,7 +77,7 @@ const DEFAULT_STYLE: OmniStyle = {
   theme: "dark",
   accent: "#3b82f6",
   font: "sans",
-  sectionOrder: ["sensors", "controls", "files", "services", "actions"],
+  sectionOrder: ["sensors", "controls", "files", "services", "actions", "devices"],
   cardOrder: {
     sensors:  ["cpu", "memory", "disk", "net_rx", "ha_solar_power", "ha_solar_battery"],
     toggles:  ["ha_entry", "ha_front", "ha_left", "ha_parking"],
@@ -73,6 +85,8 @@ const DEFAULT_STYLE: OmniStyle = {
     files:    ["documents"],
     services: ["services"],
   },
+  pinnedDevices: [],
+  deviceNames: {},
 };
 
 const SECTION_LABELS: Record<string, string> = {
@@ -81,6 +95,15 @@ const SECTION_LABELS: Record<string, string> = {
   files:    "Files",
   services: "Services",
   actions:  "Automations",
+  devices:  "HA Devices",
+};
+
+const HA_DOMAIN_LABELS: Record<string, string> = {
+  switches:       "Switches",
+  lights:         "Lights",
+  media:          "Media Players",
+  binary_sensors: "Binary Sensors",
+  sensors:        "Sensors",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -93,12 +116,26 @@ function isSensorsState(v: unknown): v is SensorsState {
 
 function mergeStyle(saved?: OmniStyle): OmniStyle {
   if (!saved) return DEFAULT_STYLE;
-  const merged = { ...DEFAULT_STYLE, ...saved, cardOrder: { ...DEFAULT_STYLE.cardOrder, ...saved.cardOrder } };
-  // Union any new sections from DEFAULT_STYLE not in saved sectionOrder
+  const merged = {
+    ...DEFAULT_STYLE, ...saved,
+    cardOrder:     { ...DEFAULT_STYLE.cardOrder, ...saved.cardOrder },
+    pinnedDevices: saved.pinnedDevices ?? DEFAULT_STYLE.pinnedDevices,
+    deviceNames:   saved.deviceNames   ?? DEFAULT_STYLE.deviceNames,
+  };
   for (const s of DEFAULT_STYLE.sectionOrder) {
     if (!merged.sectionOrder.includes(s)) merged.sectionOrder = [...merged.sectionOrder, s];
   }
   return merged;
+}
+
+function filterPinnedDevices(devices: HaDevices, pinned: string[]): HaDevices {
+  const set = new Set(pinned);
+  const result: HaDevices = {};
+  for (const [group, items] of Object.entries(devices)) {
+    const filtered = items.filter((d) => set.has(d.id));
+    if (filtered.length) result[group] = filtered;
+  }
+  return result;
 }
 
 function formatTs(ts: number | null) {
@@ -324,6 +361,213 @@ function ActionButton({ action, onTrigger }: { action: Action; onTrigger: (id: s
   );
 }
 
+function DeviceRow({
+  dev, group, onCommand, pinned, onTogglePin, customName, showOriginalName,
+}: {
+  dev: HaDevice; group: string;
+  onCommand: (id: string, svc: string) => void;
+  pinned?: boolean; onTogglePin?: (id: string) => void;
+  customName?: string; showOriginalName?: boolean;
+}) {
+  const on = dev.state === "on" || dev.state === "playing";
+  const toggleable = group === "switches" || group === "lights";
+  const displayName = customName || dev.name;
+  return (
+    <div className="px-4 py-2.5 flex items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium truncate" style={{ color: "var(--text-1)" }}>
+          {displayName}
+          {showOriginalName && customName && (
+            <span className="ml-1.5 font-normal" style={{ color: "var(--text-3)", fontSize: "0.7rem" }}>
+              ({dev.name})
+            </span>
+          )}
+        </div>
+        {group === "media" && dev.media_title && (
+          <div className="text-xs truncate mt-0.5" style={{ color: "var(--text-3)" }}>
+            {dev.media_title}{dev.media_artist ? ` · ${dev.media_artist}` : ""}
+          </div>
+        )}
+      </div>
+
+      {toggleable ? (
+        <button onClick={() => onCommand(dev.id, on ? "turn_off" : "turn_on")} className="flex-shrink-0" title={on ? "Turn off" : "Turn on"}>
+          <div className="relative w-10 h-5 rounded-full transition-colors duration-200" style={{ backgroundColor: on ? "var(--accent)" : "var(--bg-input)" }}>
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${on ? "translate-x-5" : "translate-x-0"}`} />
+          </div>
+        </button>
+      ) : (
+        <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0 tabular-nums"
+          style={{ backgroundColor: on ? "rgba(34,197,94,0.12)" : "var(--bg-input)", color: on ? "#22c55e" : "var(--text-3)" }}>
+          {group === "sensors" ? `${dev.state}${dev.unit ? ` ${dev.unit}` : ""}` : dev.state}
+        </span>
+      )}
+
+      {onTogglePin && (
+        <button
+          onClick={() => onTogglePin(dev.id)}
+          className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg transition-all text-sm"
+          style={{ backgroundColor: pinned ? "var(--accent)" : "var(--bg-input)", color: pinned ? "#fff" : "var(--text-3)" }}
+          title={pinned ? "Remove from dashboard" : "Pin to dashboard"}
+        >
+          {pinned ? "★" : "☆"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function HaDeviceBrowser({
+  devices, onCommand, emptyHint, deviceNames,
+}: { devices: HaDevices; onCommand: (entity_id: string, service: string) => void; emptyHint?: string; deviceNames?: Record<string, string> }) {
+  const groups = Object.keys(HA_DOMAIN_LABELS).filter((g) => devices[g]?.length);
+  if (groups.length === 0) return (
+    <div className="rounded-xl p-4 col-span-2 text-sm border text-center" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-3)" }}>
+      {emptyHint ?? "No devices"}
+    </div>
+  );
+  return (
+    <div className="col-span-2 flex flex-col gap-4">
+      {groups.map((group) => (
+        <div key={group} className="rounded-xl border overflow-hidden" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
+          <div className="px-4 py-2 border-b flex items-center gap-2" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-input)" }}>
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>{HA_DOMAIN_LABELS[group]}</span>
+            <span className="ml-auto text-xs px-1.5 py-0.5 rounded-full" style={{ color: "var(--text-3)", backgroundColor: "var(--border)" }}>{devices[group].length}</span>
+          </div>
+          <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+            {devices[group].map((dev) => (
+              <DeviceRow key={dev.id} dev={dev} group={group} onCommand={onCommand} customName={deviceNames?.[dev.id]} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function IntegrationsPanel({
+  open, onClose, devices, pinnedDevices, deviceNames, onTogglePin, onCommand, onRename,
+}: {
+  open: boolean; onClose: () => void;
+  devices: HaDevices; pinnedDevices: string[]; deviceNames: Record<string, string>;
+  onTogglePin: (id: string) => void;
+  onCommand: (entity_id: string, service: string) => void;
+  onRename: (id: string, name: string) => void;
+}) {
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  function startRename(id: string) {
+    setRenamingId(id);
+    setRenameValue(deviceNames[id] ?? "");
+    setTimeout(() => renameInputRef.current?.focus(), 50);
+  }
+
+  function commitRename() {
+    if (renamingId) onRename(renamingId, renameValue.trim());
+    setRenamingId(null);
+  }
+
+  const pinnedSet = new Set(pinnedDevices);
+  const groups = Object.keys(HA_DOMAIN_LABELS).filter((g) => devices[g]?.length);
+  const totalEntities = groups.reduce((n, g) => n + devices[g].length, 0);
+
+  return (
+    <>
+      {open && <div className="fixed inset-0 z-40" onClick={onClose} />}
+      <div
+        className={`fixed top-0 right-0 h-full w-96 z-50 flex flex-col shadow-2xl transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-full"}`}
+        style={{ backgroundColor: "var(--bg-card)", borderLeft: "1px solid var(--border)" }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
+          <span className="font-semibold text-sm" style={{ color: "var(--text-1)" }}>Integrations</span>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-sm" style={{ color: "var(--text-2)", backgroundColor: "var(--bg-input)" }}>✕</button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-5">
+          {/* HA integration header card */}
+          <div className="flex items-center gap-3 p-3 rounded-xl border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-app)" }}>
+            <span className="text-xl">🏠</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold" style={{ color: "var(--text-1)" }}>Home Assistant</div>
+              <div className="text-xs" style={{ color: "var(--text-3)" }}>
+                {totalEntities > 0 ? `${totalEntities} entities · ${pinnedDevices.length} on dashboard` : "Waiting for data…"}
+              </div>
+            </div>
+            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: totalEntities > 0 ? "#22c55e" : "#6b7280" }} />
+          </div>
+
+          {totalEntities > 0 && (
+            <p className="text-xs" style={{ color: "var(--text-3)" }}>
+              ★ pins to dashboard · ✎ renames · controls work directly here
+            </p>
+          )}
+
+          {/* Device groups */}
+          {groups.map((group) => (
+            <div key={group} className="flex flex-col gap-1">
+              <div className="text-xs font-semibold uppercase tracking-widest px-1 mb-1" style={{ color: "var(--text-3)" }}>
+                {HA_DOMAIN_LABELS[group]}
+              </div>
+              <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-app)" }}>
+                {devices[group].map((dev, i) => (
+                  <div key={dev.id} className={i > 0 ? "border-t" : ""} style={{ borderColor: "var(--border)" }}>
+                    {renamingId === dev.id ? (
+                      <div className="px-4 py-2.5 flex items-center gap-2">
+                        <input
+                          ref={renameInputRef}
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenamingId(null); }}
+                          placeholder={dev.name}
+                          className="flex-1 text-sm bg-transparent outline-none rounded px-2 py-1 border"
+                          style={{ color: "var(--text-1)", borderColor: "var(--accent)" }}
+                        />
+                        {renameValue && (
+                          <button onClick={() => { onRename(dev.id, ""); setRenamingId(null); }}
+                            className="text-xs px-2 py-1 rounded" style={{ color: "var(--text-3)", backgroundColor: "var(--bg-input)" }}
+                            title="Clear rename">✕</button>
+                        )}
+                        <button onClick={commitRename}
+                          className="text-xs px-2 py-1 rounded font-medium"
+                          style={{ backgroundColor: "var(--accent)", color: "#fff" }}>
+                          Save
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center">
+                        <div className="flex-1 min-w-0">
+                          <DeviceRow
+                            dev={dev} group={group} onCommand={onCommand}
+                            pinned={pinnedSet.has(dev.id)} onTogglePin={onTogglePin}
+                            customName={deviceNames[dev.id]} showOriginalName
+                          />
+                        </div>
+                        <button
+                          onClick={() => startRename(dev.id)}
+                          className="flex-shrink-0 mr-3 w-7 h-7 flex items-center justify-center rounded-lg text-xs transition-opacity opacity-40 hover:opacity-100"
+                          style={{ color: "var(--text-2)", backgroundColor: "var(--bg-input)" }}
+                          title="Rename"
+                        >✎</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {groups.length === 0 && (
+            <p className="text-xs text-center py-10" style={{ color: "var(--text-3)" }}>No HA data yet — make sure the server agent is running.</p>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 function ServicesCard({ services }: { services: Service[] }) {
   if (services.length === 0) return null;
   return (
@@ -425,11 +669,12 @@ function SettingsPanel({ open, onClose, style, onChange }: {
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [serverData, setServerData]   = useState<StatePayload | null>(null);
-  const [loading, setLoading]         = useState(true);
-  const [pendingValues, setPending]   = useState<Record<string, boolean | number>>({});
-  const [activeStyle, setActiveStyle] = useState<OmniStyle>(DEFAULT_STYLE);
-  const [settingsOpen, setSettings]   = useState(false);
+  const [serverData, setServerData]        = useState<StatePayload | null>(null);
+  const [loading, setLoading]              = useState(true);
+  const [pendingValues, setPending]        = useState<Record<string, boolean | number>>({});
+  const [activeStyle, setActiveStyle]      = useState<OmniStyle>(DEFAULT_STYLE);
+  const [settingsOpen, setSettings]        = useState(false);
+  const [integrationsOpen, setIntegrations] = useState(false);
 
   // Apply CSS variables + font whenever style changes
   useEffect(() => {
@@ -518,6 +763,26 @@ export default function Dashboard() {
     pushState({ ...base, actions });
   }
 
+  function handleHaCommand(entity_id: string, service: string) {
+    const base = serverData?.state;
+    if (!isSensorsState(base)) return;
+    pushState({ ...base, ha_command: { entity_id, service, ts: Date.now() } });
+  }
+
+  function handleTogglePin(entityId: string) {
+    const pinned = activeStyle.pinnedDevices ?? [];
+    const newPinned = pinned.includes(entityId)
+      ? pinned.filter((id) => id !== entityId)
+      : [...pinned, entityId];
+    handleStyleChange({ ...activeStyle, pinnedDevices: newPinned });
+  }
+
+  function handleRename(entityId: string, name: string) {
+    const names = { ...(activeStyle.deviceNames ?? {}) };
+    if (name) names[entityId] = name; else delete names[entityId];
+    handleStyleChange({ ...activeStyle, deviceNames: names });
+  }
+
   function handleStyleChange(newStyle: OmniStyle) {
     setActiveStyle(newStyle);
     pushStyle(newStyle);
@@ -556,10 +821,11 @@ export default function Dashboard() {
   const base = serverData?.state;
   const sv = isSensorsState(base) ? {
     ...base,
-    toggles:  base.toggles.map((t)  => t.id  in pendingValues ? { ...t,  enabled: pendingValues[t.id]  as boolean } : t),
-    sliders:  (base.sliders ?? []).map((s) => s.id in pendingValues ? { ...s, value: pendingValues[s.id] as number  } : s),
-    services: (base.services ?? []),
-    actions:  (base.actions  ?? []),
+    toggles:    base.toggles.map((t)  => t.id  in pendingValues ? { ...t,  enabled: pendingValues[t.id]  as boolean } : t),
+    sliders:    (base.sliders ?? []).map((s) => s.id in pendingValues ? { ...s, value: pendingValues[s.id] as number  } : s),
+    services:   (base.services ?? []),
+    actions:    (base.actions  ?? []),
+    ha_devices: (base.ha_devices ?? {}),
   } : null;
 
   function sorted<T extends { id: string }>(items: T[], key: string) {
@@ -574,6 +840,15 @@ export default function Dashboard() {
     <main className="min-h-screen flex flex-col items-center p-6 gap-6 transition-colors duration-300" style={{ backgroundColor: "var(--bg-app)", color: "var(--text-1)" }}>
 
       <SettingsPanel open={settingsOpen} onClose={() => setSettings(false)} style={activeStyle} onChange={handleStyleChange} />
+      <IntegrationsPanel
+        open={integrationsOpen} onClose={() => setIntegrations(false)}
+        devices={sv?.ha_devices ?? {}}
+        pinnedDevices={activeStyle.pinnedDevices ?? []}
+        deviceNames={activeStyle.deviceNames ?? {}}
+        onTogglePin={handleTogglePin}
+        onCommand={handleHaCommand}
+        onRename={handleRename}
+      />
 
       {/* Header */}
       <div className="w-full max-w-2xl flex items-start justify-between">
@@ -581,14 +856,29 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold tracking-tight mb-1">OmniState</h1>
           <p className="text-sm" style={{ color: "var(--text-2)" }}>Live sensor relay from your home server</p>
         </div>
-        <button
-          onClick={() => setSettings(true)}
-          className="mt-1 p-2.5 rounded-xl border transition-colors"
-          style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-2)" }}
-          title="Appearance settings"
-        >
-          ⚙️
-        </button>
+        <div className="flex items-center gap-2 mt-1">
+          <button
+            onClick={() => setIntegrations(true)}
+            className="relative p-2.5 rounded-xl border transition-colors"
+            style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-2)" }}
+            title="Integrations"
+          >
+            🔌
+            {(activeStyle.pinnedDevices?.length ?? 0) > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-white flex items-center justify-center text-xs font-bold" style={{ backgroundColor: "var(--accent)", fontSize: 10 }}>
+                {activeStyle.pinnedDevices.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setSettings(true)}
+            className="p-2.5 rounded-xl border transition-colors"
+            style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-2)" }}
+            title="Appearance settings"
+          >
+            ⚙️
+          </button>
+        </div>
       </div>
 
       {/* Status bar */}
@@ -664,6 +954,17 @@ export default function Dashboard() {
                   {sid === "services" && sv.services.length > 0 && (
                     <div className="grid grid-cols-2 gap-3">
                       <ServicesCard services={sv.services} />
+                    </div>
+                  )}
+
+                  {sid === "devices" && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <HaDeviceBrowser
+                        devices={filterPinnedDevices(sv.ha_devices ?? {}, activeStyle.pinnedDevices ?? [])}
+                        onCommand={handleHaCommand}
+                        deviceNames={activeStyle.deviceNames ?? {}}
+                        emptyHint="No pinned devices — open Integrations (🔌) to add some."
+                      />
                     </div>
                   )}
 

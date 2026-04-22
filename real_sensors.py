@@ -95,8 +95,9 @@ INITIAL_STATE: dict = {
     "files": [
         {"id": "documents", "label": "Mock Files", "items": []},
     ],
-    "services": [],
-    "actions":  [a.copy() for a in HA_ACTIONS],
+    "services":   [],
+    "actions":    [a.copy() for a in HA_ACTIONS],
+    "ha_devices": {},
 }
 
 
@@ -164,6 +165,18 @@ class HaClient:
             "Content-Type": "application/json",
         }
 
+    def get_all_states(self) -> list | None:
+        try:
+            req = urllib.request.Request(
+                f"{self._url}/api/states",
+                headers=self._headers(),
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return json.loads(resp.read())
+        except Exception as exc:
+            log.debug("HA get_all_states: %s", exc)
+            return None
+
     def get_state(self, entity_id: str) -> str | None:
         try:
             req = urllib.request.Request(
@@ -189,6 +202,80 @@ class HaClient:
         except Exception as exc:
             log.debug("HA push_sensor %s: %s", entity_id, exc)
             return False
+
+
+# Domains included in the device browser and how to map them
+_DEVICE_DOMAINS = {
+    "switch":        "switches",
+    "light":         "lights",
+    "input_boolean": "switches",   # group with switches
+    "media_player":  "media",
+    "binary_sensor": "binary_sensors",
+    "sensor":        "sensors",
+}
+
+# HA sensor entity prefixes to skip (virtual/internal)
+_SENSOR_SKIP_PREFIXES = ("sensor.omnistate_",)
+
+# Numeric states considered meaningful for sensor display
+def _is_numeric(val: str) -> bool:
+    try:
+        float(val)
+        return True
+    except (ValueError, TypeError):
+        return False
+
+
+def fetch_ha_devices(ha: "HaClient") -> dict:
+    """Fetch all HA entity states and return a grouped device browser dict."""
+    all_states = ha.get_all_states()
+    if all_states is None:
+        return {}
+
+    groups: dict[str, list] = {v: [] for v in _DEVICE_DOMAINS.values()}
+    seen_ids: set[str] = set()
+
+    for entity in all_states:
+        eid    = entity.get("entity_id", "")
+        domain = eid.split(".")[0]
+        group  = _DEVICE_DOMAINS.get(domain)
+        if group is None or eid in seen_ids:
+            continue
+        if any(eid.startswith(p) for p in _SENSOR_SKIP_PREFIXES):
+            continue
+
+        attrs = entity.get("attributes", {})
+        state = entity.get("state", "unknown")
+        name  = attrs.get("friendly_name") or eid
+
+        # For plain sensors only include numeric values
+        if domain == "sensor" and not _is_numeric(state):
+            continue
+
+        entry: dict = {
+            "id":    eid,
+            "name":  name,
+            "state": state,
+        }
+        if domain == "sensor":
+            unit = attrs.get("unit_of_measurement", "")
+            if unit:
+                entry["unit"] = unit
+        elif domain == "media_player":
+            entry["media_title"]  = attrs.get("media_title", "")
+            entry["media_artist"] = attrs.get("media_artist", "")
+            entry["volume"]       = attrs.get("volume_level")
+        elif domain == "light":
+            entry["brightness"] = attrs.get("brightness")
+
+        groups[group].append(entry)
+        seen_ids.add(eid)
+
+    # Sort each group by name
+    for g in groups.values():
+        g.sort(key=lambda x: x["name"].lower())
+
+    return {k: v for k, v in groups.items() if v}
 
 
 # ── HA Integration ─────────────────────────────────────────────────────────────
@@ -286,7 +373,7 @@ def scan_files(state: dict) -> dict:
 def load_state() -> dict:
     try:
         data = json.loads(SENSORS_FILE.read_text(encoding="utf-8"))
-        for key in ("sensors", "toggles", "sliders", "files", "services", "actions"):
+        for key in ("sensors", "toggles", "sliders", "files", "services", "actions", "ha_devices"):
             if key not in data:
                 data[key] = INITIAL_STATE[key]
         # Keep action definitions in sync (add new, preserve last_triggered)
@@ -327,6 +414,7 @@ def main() -> None:
             state = sync_ha_switches(state, ha)
             state = update_ha_sensors(state, ha)
             push_to_ha(state, ha)
+            state["ha_devices"] = fetch_ha_devices(ha)
 
         SENSORS_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
         log.debug("State updated")
