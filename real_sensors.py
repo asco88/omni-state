@@ -33,8 +33,9 @@ SENSORS_FILE = Path(os.environ.get("OMNISTATE_FILE", "sensors.json"))
 NET_IFACE    = os.environ.get("OMNISTATE_NET_IFACE", "ens18")
 INTERVAL     = 5
 
-HA_URL   = _get("HA_URL",   "ha_url",   "http://homeassistant.local:8123")
-HA_TOKEN = _get("HA_TOKEN", "ha_token", "")
+HA_URL    = _get("HA_URL",    "ha_url",    "http://homeassistant.local:8123")
+HA_TOKEN  = _get("HA_TOKEN",  "ha_token",  "")
+RADIO_URL = _get("RADIO_URL", "radio_url", "http://localhost:3013")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -307,6 +308,48 @@ def push_to_ha(state: dict, ha: HaClient) -> None:
             })
 
 
+# ── Radio ──────────────────────────────────────────────────────────────────────
+
+def fetch_radio() -> dict | None:
+    """Fetch current state from the radio-player-2 server."""
+    def _get_json(path: str):
+        try:
+            req = urllib.request.Request(f"{RADIO_URL}{path}")
+            with urllib.request.urlopen(req, timeout=5) as r:
+                return json.loads(r.read())
+        except Exception:
+            return None
+
+    now_playing  = _get_json("/api/now-playing") or {}
+    stations_raw = _get_json("/api/stations")
+    cast_active  = _get_json("/api/cast/active") or {}
+
+    if stations_raw is None:
+        return None
+
+    faves = [s for s in stations_raw if s.get("favorite")]
+    station_list = faves if faves else stations_raw[:8]
+    stations = [
+        {"id": s["id"], "name": s.get("name", ""), "favicon": s.get("favicon", "🎵"), "genre": s.get("genre", "")}
+        for s in station_list
+    ]
+
+    station  = now_playing.get("station")
+    cast_dev = cast_active.get("device")
+    cast_sta = cast_active.get("station")
+
+    return {
+        "playing": station is not None,
+        "station": {"id": station["id"], "name": station.get("name", ""), "favicon": station.get("favicon", "🎵")} if station else None,
+        "stations": stations,
+        "cast": {
+            "active":  bool(cast_dev),
+            "device":  {"id": cast_dev["id"], "name": cast_dev.get("name", "")} if cast_dev else None,
+            "station": {"name": cast_sta.get("name", ""), "favicon": cast_sta.get("favicon", "🎵")} if cast_sta else None,
+        },
+    }
+
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def check_services() -> list[dict]:
@@ -372,6 +415,10 @@ def main() -> None:
             state = update_ha_sensors(state, ha)
             push_to_ha(state, ha)
             state["ha_devices"] = fetch_ha_devices(ha)
+
+        radio = fetch_radio()
+        if radio is not None:
+            state["radio"] = radio
 
         SENSORS_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
         log.debug("State updated")

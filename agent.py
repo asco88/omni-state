@@ -47,8 +47,9 @@ HEARTBEAT_INTERVAL  = 30  # seconds
 CLOUD_POLL_INTERVAL = 5   # seconds
 REQUEST_TIMEOUT     = 10  # seconds
 
-HA_URL   = _get("HA_URL",   "ha_url",   "http://homeassistant.local:8123")
-HA_TOKEN = _get("HA_TOKEN", "ha_token", "")
+HA_URL    = _get("HA_URL",    "ha_url",    "http://homeassistant.local:8123")
+HA_TOKEN  = _get("HA_TOKEN",  "ha_token",  "")
+RADIO_URL = _get("RADIO_URL", "radio_url", "http://localhost:3013")
 
 # Maps OmniState toggle IDs → HA entity IDs for direct switch control
 HA_SWITCH_ENTITIES: dict[str, str] = {
@@ -188,7 +189,26 @@ def call_ha_switch(entity_id: str, on: bool) -> None:
         log.warning("HA switch %s failed: %s", entity_id, exc)
 
 
-HA_CMD_FRESHNESS_MS = 30_000  # ignore ha_command older than 30 s
+HA_CMD_FRESHNESS_MS    = 30_000
+RADIO_CMD_FRESHNESS_MS = 30_000
+
+def call_radio(cmd: dict) -> None:
+    action = cmd.get("action", "")
+    try:
+        if action == "play":
+            requests.post(f"{RADIO_URL}/api/play", json={"stationId": cmd.get("stationId")}, timeout=10)
+        elif action == "stop":
+            requests.post(f"{RADIO_URL}/api/stop", json={}, timeout=10)
+        elif action == "cast_play":
+            requests.post(f"{RADIO_URL}/api/cast/play", json={"stationId": cmd.get("stationId"), "deviceId": cmd.get("deviceId")}, timeout=10)
+        elif action == "cast_stop":
+            requests.post(f"{RADIO_URL}/api/cast/stop", json={}, timeout=10)
+        elif action == "cast_volume":
+            requests.post(f"{RADIO_URL}/api/cast/volume", json={"level": cmd.get("level")}, timeout=10)
+        log.info("Radio command: %s", action)
+    except Exception as exc:
+        log.warning("Radio command %s failed: %s", action, exc)
+
 
 def call_ha_service(entity_id: str, service: str) -> None:
     """Call an arbitrary HA service for the device browser."""
@@ -221,6 +241,7 @@ def heartbeat_loop() -> None:
 _last_ha_desired: dict[str, bool] = {}
 _last_trigger_times: dict[str, int] = {}
 _last_ha_cmd_ts: int = 0
+_last_radio_cmd_ts: int = 0
 
 
 def state_sync_loop() -> None:
@@ -262,6 +283,16 @@ def state_sync_loop() -> None:
                     if eid and svc and ts != _last_ha_cmd_ts and (now_ms - ts) < HA_CMD_FRESHNESS_MS:
                         call_ha_service(eid, svc)
                     _last_ha_cmd_ts = ts
+
+                # Radio commands
+                global _last_radio_cmd_ts
+                radio_cmd = state.get("radio_command")
+                if radio_cmd and isinstance(radio_cmd, dict):
+                    ts = radio_cmd.get("ts", 0)
+                    now_ms = time.time() * 1000
+                    if ts != _last_radio_cmd_ts and (now_ms - ts) < RADIO_CMD_FRESHNESS_MS:
+                        call_radio(radio_cmd)
+                    _last_radio_cmd_ts = ts
 
                 apply_desired(DATA_FILE, state, "State")
                 last_rev = rev

@@ -38,6 +38,19 @@ type HaDevice = {
 };
 type HaDevices = Record<string, HaDevice[]>;
 
+type RadioStation = { id: string; name: string; favicon: string; genre: string };
+type RadioState = {
+  playing: boolean;
+  station: { id: string; name: string; favicon: string } | null;
+  stations: RadioStation[];
+  cast: {
+    active: boolean;
+    device: { id: string; name: string } | null;
+    station: { name: string; favicon: string } | null;
+  };
+};
+type RadioCommand = { action: string; stationId?: string; deviceId?: string; level?: number; ts: number };
+
 type OmniStyle = {
   theme: "dark" | "light";
   accent: string;
@@ -49,14 +62,16 @@ type OmniStyle = {
 };
 
 type SensorsState = {
-  sensors:     Sensor[];
-  toggles:     Toggle[];
-  sliders:     Slider[];
-  files?:      FileGroup[];
-  services?:   Service[];
-  actions?:    Action[];
-  ha_devices?: HaDevices;
-  ha_command?: { entity_id: string; service: string; ts: number };
+  sensors:       Sensor[];
+  toggles:       Toggle[];
+  sliders:       Slider[];
+  files?:        FileGroup[];
+  services?:     Service[];
+  actions?:      Action[];
+  ha_devices?:   HaDevices;
+  ha_command?:   { entity_id: string; service: string; ts: number };
+  radio?:        RadioState;
+  radio_command?: RadioCommand;
 };
 
 interface StatePayload {
@@ -78,7 +93,7 @@ const DEFAULT_STYLE: OmniStyle = {
   theme: "dark",
   accent: "#3b82f6",
   font: "sans",
-  sectionOrder: ["sensors", "controls", "files", "services", "actions", "devices"],
+  sectionOrder: ["sensors", "radio", "controls", "files", "services", "actions", "devices"],
   cardOrder: {
     sensors:  ["cpu", "memory", "disk", "net_rx", "ha_solar_power", "ha_solar_battery"],
     toggles:  ["ha_entry", "ha_front", "ha_left", "ha_parking"],
@@ -91,6 +106,7 @@ const DEFAULT_STYLE: OmniStyle = {
 
 const SECTION_LABELS: Record<string, string> = {
   sensors:  "Sensors",
+  radio:    "Radio",
   controls: "Controls",
   files:    "Files",
   services: "Services",
@@ -130,11 +146,12 @@ function mergeStyle(saved?: OmniStyle): OmniStyle {
 
 function activeSections(sv: SensorsState, pinnedDevices: string[]): string[] {
   const present: string[] = [];
-  if (sv.sensors?.length)                                            present.push("sensors");
-  if (sv.toggles?.length || sv.sliders?.length)                     present.push("controls");
-  if (sv.files?.length)                                             present.push("files");
-  if (sv.services?.length)                                          present.push("services");
-  if (sv.actions?.length)                                           present.push("actions");
+  if (sv.sensors?.length)                                               present.push("sensors");
+  if (sv.radio)                                                         present.push("radio");
+  if (sv.toggles?.length || sv.sliders?.length)                        present.push("controls");
+  if (sv.files?.length)                                                 present.push("files");
+  if (sv.services?.length)                                              present.push("services");
+  if (sv.actions?.length)                                               present.push("actions");
   if (Object.keys(sv.ha_devices ?? {}).length || pinnedDevices.length) present.push("devices");
   return present;
 }
@@ -579,6 +596,65 @@ function IntegrationsPanel({
   );
 }
 
+function RadioCard({ radio, onCommand }: { radio: RadioState; onCommand: (cmd: RadioCommand) => void }) {
+  const nowPlaying = radio.station ?? (radio.cast.active ? radio.cast.station : null);
+  const isPlaying  = radio.playing || radio.cast.active;
+
+  return (
+    <div className="rounded-xl col-span-2 border overflow-hidden" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
+      {/* Now-playing bar */}
+      <div className="px-4 py-3 flex items-center gap-3 border-b" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-input)" }}>
+        <span className="text-2xl flex-shrink-0">{nowPlaying?.favicon ?? "📻"}</span>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold truncate" style={{ color: isPlaying ? "var(--accent)" : "var(--text-3)" }}>
+            {nowPlaying?.name ?? "Not playing"}
+          </div>
+          {radio.cast.active && radio.cast.device && (
+            <div className="text-xs truncate mt-0.5" style={{ color: "var(--text-3)" }}>
+              Cast → {radio.cast.device.name}
+            </div>
+          )}
+        </div>
+        {isPlaying ? (
+          <button
+            onClick={() => onCommand({ action: radio.cast.active ? "cast_stop" : "stop", ts: Date.now() })}
+            className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95"
+            style={{ backgroundColor: "rgba(239,68,68,0.12)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}
+          >
+            ■ Stop
+          </button>
+        ) : (
+          <span className="text-xs px-2 py-1 rounded-lg flex-shrink-0" style={{ color: "var(--text-3)", backgroundColor: "var(--bg-app)" }}>Idle</span>
+        )}
+      </div>
+
+      {/* Station list */}
+      <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+        {radio.stations.map((s) => {
+          const isActive = radio.station?.id === s.id || (radio.cast.active && radio.cast.station?.name === s.name);
+          return (
+            <button
+              key={s.id}
+              onClick={() => onCommand({ action: "play", stationId: s.id, ts: Date.now() })}
+              className="w-full px-4 py-2.5 flex items-center gap-3 transition-colors text-left active:scale-[0.99]"
+              style={{ backgroundColor: isActive ? "var(--bg-input)" : "transparent" }}
+            >
+              <span className="text-base flex-shrink-0">{s.favicon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm truncate" style={{ color: isActive ? "var(--accent)" : "var(--text-1)" }}>{s.name}</div>
+                {s.genre && <div className="text-xs truncate" style={{ color: "var(--text-3)" }}>{s.genre}</div>}
+              </div>
+              {isActive && (
+                <span className="text-xs flex-shrink-0 w-2 h-2 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ServicesCard({ services }: { services: Service[] }) {
   if (services.length === 0) return null;
   return (
@@ -780,6 +856,12 @@ export default function Dashboard() {
     pushState({ ...base, ha_command: { entity_id, service, ts: Date.now() } });
   }
 
+  function handleRadioCommand(cmd: RadioCommand) {
+    const base = serverData?.state;
+    if (!isSensorsState(base)) return;
+    pushState({ ...base, radio_command: cmd });
+  }
+
   function handleTogglePin(entityId: string) {
     const pinned = activeStyle.pinnedDevices ?? [];
     const newPinned = pinned.includes(entityId)
@@ -947,6 +1029,12 @@ export default function Dashboard() {
                         ))}
                       </div>
                     </SortableContext>
+                  )}
+
+                  {sid === "radio" && sv.radio && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <RadioCard radio={sv.radio} onCommand={handleRadioCommand} />
+                    </div>
                   )}
 
                   {sid === "controls" && (
