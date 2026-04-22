@@ -60,6 +60,8 @@ type OmniStyle = {
   pinnedDevices: string[];
   deviceNames: Record<string, string>;
   hiddenSections: string[];
+  desktopLayout: "single" | "twoCol";
+  sectionColumns: Record<string, 0 | 1>;
 };
 
 type SensorsState = {
@@ -104,6 +106,8 @@ const DEFAULT_STYLE: OmniStyle = {
   pinnedDevices: [],
   deviceNames: {},
   hiddenSections: [],
+  desktopLayout: "single",
+  sectionColumns: { sensors: 0, radio: 0, controls: 0, files: 0, actions: 0, services: 1, devices: 1 },
 };
 
 const SECTION_LABELS: Record<string, string> = {
@@ -140,6 +144,8 @@ function mergeStyle(saved?: OmniStyle): OmniStyle {
     pinnedDevices:  saved.pinnedDevices  ?? DEFAULT_STYLE.pinnedDevices,
     deviceNames:    saved.deviceNames    ?? DEFAULT_STYLE.deviceNames,
     hiddenSections: saved.hiddenSections ?? DEFAULT_STYLE.hiddenSections,
+    desktopLayout:  saved.desktopLayout  ?? DEFAULT_STYLE.desktopLayout,
+    sectionColumns: { ...DEFAULT_STYLE.sectionColumns, ...(saved.sectionColumns ?? {}) },
   };
   for (const s of DEFAULT_STYLE.sectionOrder) {
     if (!merged.sectionOrder.includes(s)) merged.sectionOrder = [...merged.sectionOrder, s];
@@ -243,6 +249,40 @@ function SortableSection({ id, title, editMode, onHide, children }: {
               title="Drag to reorder"
             >
               <GripIcon />
+            </button>
+          </div>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function PlainSection({ title, editMode, onHide, columnSide, onMoveColumn, children }: {
+  title: string; editMode: boolean; onHide: () => void;
+  columnSide: "left" | "right"; onMoveColumn: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>{title}</h2>
+        {editMode && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onMoveColumn}
+              className="px-2 py-1 rounded text-xs transition-opacity opacity-60 hover:opacity-100"
+              style={{ color: "var(--text-2)", backgroundColor: "var(--bg-input)" }}
+              title={columnSide === "left" ? "Move to right column" : "Move to left column"}
+            >
+              {columnSide === "left" ? "→" : "←"}
+            </button>
+            <button
+              onClick={onHide}
+              className="px-2 py-1 rounded text-xs transition-opacity opacity-60 hover:opacity-100"
+              style={{ color: "var(--text-2)", backgroundColor: "var(--bg-input)" }}
+            >
+              Hide
             </button>
           </div>
         )}
@@ -864,6 +904,26 @@ function SettingsPanel({ open, onClose, style, onChange }: {
           </div>
         </div>
 
+        {/* Desktop Layout */}
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Desktop Layout</span>
+          <div className="flex gap-2">
+            {(["single", "twoCol"] as const).map((l) => (
+              <button key={l} onClick={() => onChange({ ...style, desktopLayout: l })}
+                className="flex-1 py-2 rounded-lg text-xs font-medium transition-all"
+                style={{
+                  backgroundColor: style.desktopLayout === l ? "var(--accent)" : "var(--bg-input)",
+                  color: style.desktopLayout === l ? "#fff" : "var(--text-2)",
+                }}>
+                {l === "single" ? "▬ Single" : "▬ ▬ Two Col"}
+              </button>
+            ))}
+          </div>
+          {style.desktopLayout === "twoCol" && (
+            <p className="text-xs" style={{ color: "var(--text-3)" }}>Use Edit mode to move sections between columns with ← →.</p>
+          )}
+        </div>
+
         <p className="text-xs mt-auto leading-relaxed" style={{ color: "var(--text-3)" }}>
           Drag section headers or sensor cards to reorder. All preferences sync to your server.
         </p>
@@ -1002,6 +1062,14 @@ export default function Dashboard() {
     pushStyle(newStyle);
   }
 
+  function moveSectionColumn(sid: string) {
+    const current = (activeStyle.sectionColumns ?? {})[sid] ?? 0;
+    handleStyleChange({
+      ...activeStyle,
+      sectionColumns: { ...(activeStyle.sectionColumns ?? {}), [sid]: current === 0 ? 1 : 0 },
+    });
+  }
+
   function hideSection(sid: string) {
     const hidden = [...(activeStyle.hiddenSections ?? [])];
     if (!hidden.includes(sid)) hidden.push(sid);
@@ -1077,7 +1145,7 @@ export default function Dashboard() {
       />
 
       {/* Header */}
-      <div className="w-full max-w-2xl flex items-start justify-between">
+      <div className={`w-full flex items-start justify-between ${activeStyle.desktopLayout === "twoCol" ? "max-w-2xl lg:max-w-5xl" : "max-w-2xl"}`}>
         <div>
           <h1 className="text-3xl font-bold tracking-tight mb-1">OmniState</h1>
           <p className="text-sm" style={{ color: "var(--text-2)" }}>Live sensor relay from your home server</p>
@@ -1136,7 +1204,7 @@ export default function Dashboard() {
       </div>
 
       {/* Status bar */}
-      <div className="w-full max-w-2xl rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3 border" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
+      <div className={`w-full rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3 border ${activeStyle.desktopLayout === "twoCol" ? "max-w-2xl lg:max-w-5xl" : "max-w-2xl"}`} style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
         <div className="flex items-center gap-2 flex-1">
           <span className={`w-2.5 h-2.5 rounded-full inline-block ${loading ? "animate-pulse" : ""}`}
             style={{ backgroundColor: loading ? "#facc15" : serverData?.serverOnline ? "#22c55e" : "#ef4444" }} />
@@ -1159,25 +1227,27 @@ export default function Dashboard() {
       {sv ? (
         <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           {(() => {
-            const allActive    = activeSections(sv, activeStyle.pinnedDevices ?? []);
-            const hiddenSet    = new Set(activeStyle.hiddenSections ?? []);
-            const active       = new Set(allActive.filter(s => !hiddenSet.has(s)));
-            const visible      = [
-              ...activeStyle.sectionOrder.filter((s) => active.has(s)),
-              ...[...active].filter((s) => !activeStyle.sectionOrder.includes(s)),
+            const svDef          = sv!;
+            const allActive      = activeSections(svDef, activeStyle.pinnedDevices ?? []);
+            const hiddenSet      = new Set(activeStyle.hiddenSections ?? []);
+            const active         = new Set(allActive.filter(s => !hiddenSet.has(s)));
+            const visible        = [
+              ...activeStyle.sectionOrder.filter(s => active.has(s)),
+              ...[...active].filter(s => !activeStyle.sectionOrder.includes(s)),
             ];
             const hiddenWithData = allActive.filter(s => hiddenSet.has(s));
-            return (
-          <SortableContext items={visible.map((s) => `section:${s}`)} strategy={verticalListSortingStrategy}>
-            <div className="w-full max-w-2xl flex flex-col gap-6">
+            const isTwoCol       = activeStyle.desktopLayout === "twoCol";
+            const cols           = activeStyle.sectionColumns ?? {};
+            const leftSections   = visible.filter(s => (cols[s] ?? 0) === 0);
+            const rightSections  = visible.filter(s => (cols[s] ?? 0) === 1);
 
-              {visible.map((sid) => (
-                <SortableSection key={sid} id={`section:${sid}`} title={SECTION_LABELS[sid] ?? sid} editMode={editMode} onHide={() => hideSection(sid)}>
-
+            function body(sid: string) {
+              return (
+                <>
                   {sid === "sensors" && (
-                    <SortableContext items={activeStyle.cardOrder.sensors.map((id) => `sensor:${id}`)} strategy={rectSortingStrategy}>
+                    <SortableContext items={activeStyle.cardOrder.sensors.map(id => `sensor:${id}`)} strategy={rectSortingStrategy}>
                       <div className="grid grid-cols-2 gap-3">
-                        {sorted(sv.sensors, "sensors").map((s) => (
+                        {sorted(svDef.sensors, "sensors").map(s => (
                           <SortableCard key={s.id} id={`sensor:${s.id}`} editMode={editMode}>
                             {({ dragHandleProps }) => <SensorCard sensor={s} dragHandleProps={dragHandleProps} editMode={editMode} />}
                           </SortableCard>
@@ -1185,80 +1255,97 @@ export default function Dashboard() {
                       </div>
                     </SortableContext>
                   )}
-
-                  {sid === "radio" && sv.radio && (
+                  {sid === "radio" && svDef.radio && (
                     <div className="grid grid-cols-2 gap-3">
-                      <RadioCard radio={sv.radio} onCommand={handleRadioCommand} />
+                      <RadioCard radio={svDef.radio} onCommand={handleRadioCommand} />
                     </div>
                   )}
-
                   {sid === "controls" && (
-                    <SortableContext items={activeStyle.cardOrder.toggles.map((id) => `toggle:${id}`)} strategy={rectSortingStrategy}>
-                      <div className="grid grid-cols-2 gap-3 relative">
-                        {sorted(sv.toggles, "toggles").map((t) => (
+                    <SortableContext items={activeStyle.cardOrder.toggles.map(id => `toggle:${id}`)} strategy={rectSortingStrategy}>
+                      <div className="grid grid-cols-2 gap-3">
+                        {sorted(svDef.toggles, "toggles").map(t => (
                           <SortableCard key={t.id} id={`toggle:${t.id}`} editMode={editMode}>
                             {({ dragHandleProps }) => <ToggleSwitch toggle={t} onToggle={handleToggle} dragHandleProps={dragHandleProps} editMode={editMode} />}
                           </SortableCard>
                         ))}
-                        {sv.sliders.map((s) => (
-                          <VolumeSlider key={s.id} slider={s} onCommit={handleSlider} />
-                        ))}
+                        {svDef.sliders.map(s => <VolumeSlider key={s.id} slider={s} onCommit={handleSlider} />)}
                       </div>
                     </SortableContext>
                   )}
-
                   {sid === "files" && (
                     <div className="grid grid-cols-2 gap-3">
-                      {(sv.files ?? []).map((g) => <FileCard key={g.id} group={g} />)}
+                      {(svDef.files ?? []).map(g => <FileCard key={g.id} group={g} />)}
                     </div>
                   )}
-
                   {sid === "actions" && (
                     <div className="grid grid-cols-2 gap-3">
-                      {(sv.actions ?? []).map((a) => (
-                        <ActionButton key={a.id} action={a} onTrigger={handleAction} />
-                      ))}
+                      {(svDef.actions ?? []).map(a => <ActionButton key={a.id} action={a} onTrigger={handleAction} />)}
                     </div>
                   )}
-
                   {sid === "services" && (
                     <div className="grid grid-cols-2 gap-3">
-                      <ServicesCard services={sv.services ?? []} />
+                      <ServicesCard services={svDef.services ?? []} />
                     </div>
                   )}
-
                   {sid === "devices" && (
                     <div className="grid grid-cols-2 gap-3">
                       <HaDeviceBrowser
-                        devices={filterPinnedDevices(sv.ha_devices ?? {}, activeStyle.pinnedDevices ?? [])}
+                        devices={filterPinnedDevices(svDef.ha_devices ?? {}, activeStyle.pinnedDevices ?? [])}
                         onCommand={handleHaCommand}
                         deviceNames={activeStyle.deviceNames ?? {}}
                         emptyHint="No pinned devices — open Integrations (🔌) to add some."
                       />
                     </div>
                   )}
+                </>
+              );
+            }
 
-                </SortableSection>
-              ))}
+            const hiddenRestore = editMode && hiddenWithData.length > 0 ? (
+              <div className="rounded-xl p-4 border flex flex-wrap items-center gap-2" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
+                <span className="text-xs font-semibold uppercase tracking-widest mr-1" style={{ color: "var(--text-3)" }}>Hidden</span>
+                {hiddenWithData.map(sid => (
+                  <button key={sid} onClick={() => showSection(sid)}
+                    className="px-3 py-1 rounded-lg text-xs font-medium transition-all hover:opacity-80 active:scale-95"
+                    style={{ backgroundColor: "var(--bg-input)", color: "var(--text-2)", border: "1px solid var(--border)" }}>
+                    + {SECTION_LABELS[sid] ?? sid}
+                  </button>
+                ))}
+              </div>
+            ) : null;
 
-              {editMode && hiddenWithData.length > 0 && (
-                <div className="rounded-xl p-4 border flex flex-wrap items-center gap-2" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
-                  <span className="text-xs font-semibold uppercase tracking-widest mr-1" style={{ color: "var(--text-3)" }}>Hidden</span>
-                  {hiddenWithData.map(sid => (
-                    <button
-                      key={sid}
-                      onClick={() => showSection(sid)}
-                      className="px-3 py-1 rounded-lg text-xs font-medium transition-all hover:opacity-80 active:scale-95"
-                      style={{ backgroundColor: "var(--bg-input)", color: "var(--text-2)", border: "1px solid var(--border)" }}
-                    >
-                      + {SECTION_LABELS[sid] ?? sid}
-                    </button>
-                  ))}
-                </div>
-              )}
+            return (
+              <>
+                {/* Mobile + single-column desktop */}
+                <SortableContext items={visible.map(s => `section:${s}`)} strategy={verticalListSortingStrategy}>
+                  <div className={`${isTwoCol ? "lg:hidden" : ""} w-full max-w-2xl flex flex-col gap-6`}>
+                    {visible.map(sid => (
+                      <SortableSection key={sid} id={`section:${sid}`} title={SECTION_LABELS[sid] ?? sid} editMode={editMode} onHide={() => hideSection(sid)}>
+                        {body(sid)}
+                      </SortableSection>
+                    ))}
+                    {hiddenRestore}
+                  </div>
+                </SortableContext>
 
-            </div>
-          </SortableContext>
+                {/* Desktop two-column (lg+ only) */}
+                {isTwoCol && (
+                  <div className="hidden lg:flex flex-col gap-6 w-full max-w-5xl">
+                    <div className="flex gap-8">
+                      {([leftSections, rightSections] as const).map((col, colIdx) => (
+                        <div key={colIdx} className="flex-1 min-w-0 flex flex-col gap-6">
+                          {col.map(sid => (
+                            <PlainSection key={sid} title={SECTION_LABELS[sid] ?? sid} editMode={editMode} onHide={() => hideSection(sid)} columnSide={colIdx === 0 ? "left" : "right"} onMoveColumn={() => moveSectionColumn(sid)}>
+                              {body(sid)}
+                            </PlainSection>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                    {hiddenRestore}
+                  </div>
+                )}
+              </>
             );
           })()}
         </DndContext>
