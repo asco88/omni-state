@@ -718,7 +718,7 @@ function ServerSetupPanel({ open, onClose }: { open: boolean; onClose: () => voi
   }, [open, token]);
 
   async function regenerate() {
-    if (!confirm("Regenerate token? The old token will stop working immediately.")) return;
+    if (token && !confirm("Regenerate token? The old token will stop working immediately.")) return;
     setLoading(true); setRegen(true);
     const d = await fetch("/api/token", { method: "POST" }).then(r => r.json());
     setToken(d.token ?? null);
