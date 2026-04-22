@@ -4,6 +4,10 @@ __pycache__/
 *.pyo
 .env
 
+# Local env files — contain real secrets, never commit
+.env.local
+.env*.local
+
 # OmniState runtime files — contain real tokens and live data, never commit
 config.json
 sensors.json
