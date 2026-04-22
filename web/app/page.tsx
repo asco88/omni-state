@@ -49,12 +49,12 @@ type OmniStyle = {
 };
 
 type SensorsState = {
-  sensors:    Sensor[];
-  toggles:    Toggle[];
-  sliders:    Slider[];
-  files:      FileGroup[];
-  services:   Service[];
-  actions:    Action[];
+  sensors:     Sensor[];
+  toggles:     Toggle[];
+  sliders:     Slider[];
+  files?:      FileGroup[];
+  services?:   Service[];
+  actions?:    Action[];
   ha_devices?: HaDevices;
   ha_command?: { entity_id: string; service: string; ts: number };
 };
@@ -83,7 +83,6 @@ const DEFAULT_STYLE: OmniStyle = {
     sensors:  ["cpu", "memory", "disk", "net_rx", "ha_solar_power", "ha_solar_battery"],
     toggles:  ["ha_entry", "ha_front", "ha_left", "ha_parking"],
     sliders:  ["volume"],
-    files:    ["documents"],
     services: ["services"],
   },
   pinnedDevices: [],
@@ -127,6 +126,17 @@ function mergeStyle(saved?: OmniStyle): OmniStyle {
     if (!merged.sectionOrder.includes(s)) merged.sectionOrder = [...merged.sectionOrder, s];
   }
   return merged;
+}
+
+function activeSections(sv: SensorsState, pinnedDevices: string[]): string[] {
+  const present: string[] = [];
+  if (sv.sensors?.length)                                            present.push("sensors");
+  if (sv.toggles?.length || sv.sliders?.length)                     present.push("controls");
+  if (sv.files?.length)                                             present.push("files");
+  if (sv.services?.length)                                          present.push("services");
+  if (sv.actions?.length)                                           present.push("actions");
+  if (Object.keys(sv.ha_devices ?? {}).length || pinnedDevices.length) present.push("devices");
+  return present;
 }
 
 function filterPinnedDevices(devices: HaDevices, pinned: string[]): HaDevices {
@@ -824,9 +834,10 @@ export default function Dashboard() {
     ...base,
     toggles:    base.toggles.map((t)  => t.id  in pendingValues ? { ...t,  enabled: pendingValues[t.id]  as boolean } : t),
     sliders:    (base.sliders ?? []).map((s) => s.id in pendingValues ? { ...s, value: pendingValues[s.id] as number  } : s),
-    services:   (base.services ?? []),
-    actions:    (base.actions  ?? []),
-    ha_devices: (base.ha_devices ?? {}),
+    files:      base.files      ?? [],
+    services:   base.services   ?? [],
+    actions:    base.actions    ?? [],
+    ha_devices: base.ha_devices ?? {},
   } : null;
 
   function sorted<T extends { id: string }>(items: T[], key: string) {
@@ -913,10 +924,17 @@ export default function Dashboard() {
 
       {sv ? (
         <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={activeStyle.sectionOrder.map((s) => `section:${s}`)} strategy={verticalListSortingStrategy}>
+          {(() => {
+            const active = new Set(activeSections(sv, activeStyle.pinnedDevices ?? []));
+            const visible = [
+              ...activeStyle.sectionOrder.filter((s) => active.has(s)),
+              ...[...active].filter((s) => !activeStyle.sectionOrder.includes(s)),
+            ];
+            return (
+          <SortableContext items={visible.map((s) => `section:${s}`)} strategy={verticalListSortingStrategy}>
             <div className="w-full max-w-2xl flex flex-col gap-6">
 
-              {activeStyle.sectionOrder.map((sid) => (
+              {visible.map((sid) => (
                 <SortableSection key={sid} id={`section:${sid}`} title={SECTION_LABELS[sid] ?? sid}>
 
                   {sid === "sensors" && (
@@ -948,21 +966,21 @@ export default function Dashboard() {
 
                   {sid === "files" && (
                     <div className="grid grid-cols-2 gap-3">
-                      {sv.files.map((g) => <FileCard key={g.id} group={g} />)}
+                      {(sv.files ?? []).map((g) => <FileCard key={g.id} group={g} />)}
                     </div>
                   )}
 
-                  {sid === "actions" && sv.actions.length > 0 && (
+                  {sid === "actions" && (
                     <div className="grid grid-cols-2 gap-3">
-                      {sv.actions.map((a) => (
+                      {(sv.actions ?? []).map((a) => (
                         <ActionButton key={a.id} action={a} onTrigger={handleAction} />
                       ))}
                     </div>
                   )}
 
-                  {sid === "services" && sv.services.length > 0 && (
+                  {sid === "services" && (
                     <div className="grid grid-cols-2 gap-3">
-                      <ServicesCard services={sv.services} />
+                      <ServicesCard services={sv.services ?? []} />
                     </div>
                   )}
 
@@ -981,6 +999,8 @@ export default function Dashboard() {
               ))}
             </div>
           </SortableContext>
+            );
+          })()}
         </DndContext>
       ) : (
         <div className="w-full max-w-2xl rounded-xl border overflow-hidden" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>

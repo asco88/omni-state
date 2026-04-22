@@ -30,7 +30,6 @@ def _get(env_key: str, cfg_key: str, default: str = "") -> str:
     return os.environ.get(env_key) or _cfg.get(cfg_key, default)
 
 SENSORS_FILE = Path(os.environ.get("OMNISTATE_FILE", "sensors.json"))
-FILES_DIR    = SENSORS_FILE.parent / "mock-files"
 NET_IFACE    = os.environ.get("OMNISTATE_NET_IFACE", "ens18")
 INTERVAL     = 5
 
@@ -62,15 +61,6 @@ HA_SENSOR_MAP = [
     ("ha_solar_battery", "sensor.solaredge_storage_level", "Solar Battery", "%",  0, 100),
 ]
 
-# HA switch/boolean entities → pulled into OmniState toggles (bidirectional)
-# (omnistate_id, ha_entity_id, label)
-HA_SWITCH_MAP = [
-    ("ha_entry",   "input_boolean.entry_light",         "Entry Light"),
-    ("ha_front",   "switch.right_switch_2",             "Front"),
-    ("ha_left",    "switch.wifi_smart_switch_switch_2", "Left Switch"),
-    ("ha_parking", "switch.wifi_smart_switch_switch_3", "Parking"),
-]
-
 # Ubuntu metrics to push back into HA as virtual sensor entities
 # (omnistate_sensor_id, ha_entity_id, ha_friendly_name, unit, icon)
 HA_PUSH_MAP = [
@@ -96,18 +86,8 @@ INITIAL_STATE: dict = {
         {"id": "ha_solar_power",  "label": "Solar Power",  "value": 0.0, "unit": "kW",   "min": 0, "max": 12},
         {"id": "ha_solar_battery","label": "Solar Battery","value": 0.0, "unit": "%",    "min": 0, "max": 100},
     ],
-    "toggles": [
-        {"id": "ha_entry",   "label": "Entry Light", "enabled": False},
-        {"id": "ha_front",   "label": "Front",       "enabled": False},
-        {"id": "ha_left",    "label": "Left Switch",  "enabled": False},
-        {"id": "ha_parking", "label": "Parking",     "enabled": False},
-    ],
-    "sliders": [
-        {"id": "volume", "label": "Master Volume", "value": 65, "min": 0, "max": 100, "unit": "%"},
-    ],
-    "files": [
-        {"id": "documents", "label": "Mock Files", "items": []},
-    ],
+    "toggles": [],
+    "sliders": [],
     "services":   [],
     "actions":    [a.copy() for a in HA_ACTIONS],
     "ha_devices": {},
@@ -293,31 +273,6 @@ def fetch_ha_devices(ha: "HaClient") -> dict:
 
 # ── HA Integration ─────────────────────────────────────────────────────────────
 
-def sync_ha_switches(state: dict, ha: HaClient) -> dict:
-    """Read actual HA switch states and write them to sensors.json.
-    Switch control is handled exclusively by agent.py to avoid race conditions."""
-    ha_ids = {oid for oid, _, _ in HA_SWITCH_MAP}
-
-    # Keep only HA-mapped toggles; drop legacy mock ones
-    state["toggles"] = [t for t in state.get("toggles", []) if t["id"] in ha_ids]
-
-    existing = {t["id"] for t in state["toggles"]}
-    for oid, eid, lbl in HA_SWITCH_MAP:
-        raw = ha.get_state(eid)
-        if raw is None:
-            continue
-        actual = raw == "on"
-        if oid in existing:
-            for t in state["toggles"]:
-                if t["id"] == oid:
-                    t["enabled"] = actual
-        else:
-            state["toggles"].append({"id": oid, "label": lbl, "enabled": actual})
-            existing.add(oid)
-
-    return state
-
-
 def update_ha_sensors(state: dict, ha: HaClient) -> dict:
     """Pull HA sensor values into OmniState sensors list."""
     existing = {s["id"] for s in state.get("sensors", [])}
@@ -370,32 +325,23 @@ def check_services() -> list[dict]:
     return result
 
 
-def scan_files(state: dict) -> dict:
-    items = []
-    if FILES_DIR.is_dir():
-        for entry in sorted(FILES_DIR.iterdir()):
-            if entry.is_file():
-                s = entry.stat()
-                items.append({"name": entry.name, "size": s.st_size, "modified": int(s.st_mtime * 1000)})
-    for group in state.get("files", []):
-        if group.get("id") == "documents":
-            group["items"] = items
-    return state
-
-
 def load_state() -> dict:
     try:
         data = json.loads(SENSORS_FILE.read_text(encoding="utf-8"))
-        for key in ("sensors", "toggles", "sliders", "files", "services", "actions", "ha_devices"):
-            if key not in data:
-                data[key] = INITIAL_STATE[key]
-        # Keep action definitions in sync (add new, preserve last_triggered)
-        existing = {a["id"]: a for a in data["actions"]}
-        data["actions"] = [{**a, **{k: v for k, v in existing.get(a["id"], {}).items() if k != "id"}}
-                           for a in HA_ACTIONS]
-        return data
     except (FileNotFoundError, json.JSONDecodeError):
-        return json.loads(json.dumps(INITIAL_STATE))
+        data = {}
+    # Always use INITIAL_STATE as the authoritative schema for config-defined keys
+    for key in ("toggles", "sliders"):
+        data[key] = list(INITIAL_STATE[key])
+    data.pop("files", None)
+    for key in ("sensors", "services", "actions", "ha_devices"):
+        if key not in data:
+            data[key] = INITIAL_STATE[key]
+    # Keep action definitions in sync (add new, preserve last_triggered)
+    existing = {a["id"]: a for a in data["actions"]}
+    data["actions"] = [{**a, **{k: v for k, v in existing.get(a["id"], {}).items() if k != "id"}}
+                       for a in HA_ACTIONS]
+    return data
 
 
 def update_sensors(state: dict, m: Metrics) -> dict:
@@ -420,11 +366,9 @@ def main() -> None:
     while True:
         state = load_state()
         state = update_sensors(state, m)
-        state = scan_files(state)
         state["services"] = check_services()
 
         if ha:
-            state = sync_ha_switches(state, ha)
             state = update_ha_sensors(state, ha)
             push_to_ha(state, ha)
             state["ha_devices"] = fetch_ha_devices(ha)

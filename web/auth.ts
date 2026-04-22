@@ -10,10 +10,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   pages: { signIn: "/login" },
   callbacks: {
-    signIn({ profile }) {
-      const allowed = process.env.ALLOWED_EMAIL;
-      // If ALLOWED_EMAIL is set, restrict to that address only
-      return !allowed || profile?.email === allowed;
+    authorized({ auth: session }) {
+      // Called by middleware — return true to allow, false to redirect to /login
+      return !!session?.user;
+    },
+    signIn({ user }) {
+      const allowed = process.env.ALLOWED_EMAIL?.trim();
+      return !allowed || user.email === allowed;
     },
   },
 });
