@@ -13,7 +13,7 @@ from .const import DOMAIN, SCAN_INTERVAL
 _LOGGER = logging.getLogger(__name__)
 
 
-class OmniStateCoordinator(DataUpdateCoordinator):
+class SiteRelayCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, url: str, token: str) -> None:
         super().__init__(
             hass,
@@ -41,7 +41,7 @@ class OmniStateCoordinator(DataUpdateCoordinator):
         except aiohttp.ClientResponseError as err:
             raise UpdateFailed(f"Auth error ({err.status}): check your API token") from err
         except Exception as err:
-            raise UpdateFailed(f"Cannot reach OmniState at {self._url}: {err}") from err
+            raise UpdateFailed(f"Cannot reach SiteRelay at {self._url}: {err}") from err
 
     async def async_send_command(self, payload: dict) -> None:
         try:
@@ -53,4 +53,4 @@ class OmniStateCoordinator(DataUpdateCoordinator):
             ) as resp:
                 resp.raise_for_status()
         except Exception as err:
-            _LOGGER.error("Failed to send OmniState command: %s", err)
+            _LOGGER.error("Failed to send SiteRelay command: %s", err)

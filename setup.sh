@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# OmniState setup — installs dependencies, writes config, and registers systemd services.
+# SiteRelay setup — installs dependencies, writes config, and registers systemd services.
 # Run as a normal user (sudo is invoked only where needed).
 
 set -e
@@ -15,7 +15,7 @@ warn() { echo -e "${YELLOW}⚠ $*${RESET}"; }
 
 echo ""
 echo "╔══════════════════════════════════════╗"
-echo "║         OmniState Setup              ║"
+echo "║         SiteRelay Setup              ║"
 echo "╚══════════════════════════════════════╝"
 echo ""
 
@@ -38,7 +38,7 @@ default_net_iface=$(read_cfg net_iface)
 # ── 2. Prompt for values ──────────────────────────────────────────────────────
 
 say "Step 1/5 — Vercel deployment URL"
-echo "  This is the URL of your OmniState Vercel app."
+echo "  This is the URL of your SiteRelay Vercel app."
 echo "  Deploy first (see INSTALL.md) if you haven't already."
 read -rp "  Vercel URL [$default_vercel]: " vercel_url
 vercel_url="${vercel_url:-$default_vercel}"
@@ -121,7 +121,7 @@ say "Installing systemd services…"
 
 sudo tee /etc/systemd/system/real-sensors.service > /dev/null <<EOF
 [Unit]
-Description=OmniState Real Sensor Collector
+Description=SiteRelay Real Sensor Collector
 After=network.target
 
 [Service]
@@ -136,9 +136,9 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-sudo tee /etc/systemd/system/omnistate.service > /dev/null <<EOF
+sudo tee /etc/systemd/system/siterelay.service > /dev/null <<EOF
 [Unit]
-Description=OmniState Agent
+Description=SiteRelay Agent
 After=network.target
 
 [Service]
@@ -154,17 +154,17 @@ WantedBy=multi-user.target
 EOF
 
 sudo systemctl daemon-reload
-sudo systemctl enable real-sensors omnistate
-sudo systemctl restart real-sensors omnistate
+sudo systemctl enable real-sensors siterelay
+sudo systemctl restart real-sensors siterelay
 
 ok "real-sensors service enabled and started"
-ok "omnistate service enabled and started"
+ok "siterelay service enabled and started"
 
 # ── 6. Summary ────────────────────────────────────────────────────────────────
 
 echo ""
 echo "═══════════════════════════════════════════════════"
-ok "OmniState is running!"
+ok "SiteRelay is running!"
 echo ""
 echo "  Dashboard : $vercel_url"
 echo "  HA        : $ha_url"
@@ -181,7 +181,7 @@ echo ""
 echo "  See INSTALL.md for step-by-step instructions."
 echo ""
 echo "  Check logs:"
-echo "    journalctl -u omnistate -f"
+echo "    journalctl -u siterelay -f"
 echo "    journalctl -u real-sensors -f"
 echo ""
 warn "To add services, HA sensors, switches, and actions:"

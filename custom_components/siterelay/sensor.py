@@ -8,25 +8,25 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, CONF_URL
-from .coordinator import OmniStateCoordinator
-from .entity import OmniStateEntity
+from .coordinator import SiteRelayCoordinator
+from .entity import SiteRelayEntity
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    coordinator: OmniStateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: SiteRelayCoordinator = hass.data[DOMAIN][entry.entry_id]
     url = entry.data[CONF_URL]
 
-    entities: list[OmniStateEntity] = [OmniStateLastSeenSensor(coordinator, entry.entry_id, url)]
+    entities: list[SiteRelayEntity] = [SiteRelayLastSeenSensor(coordinator, entry.entry_id, url)]
 
     for sensor_def in (coordinator.data or {}).get("state", {}).get("sensors", []):
-        entities.append(OmniStateMetricSensor(coordinator, entry.entry_id, url, sensor_def))
+        entities.append(SiteRelayMetricSensor(coordinator, entry.entry_id, url, sensor_def))
 
     async_add_entities(entities)
 
 
-class OmniStateMetricSensor(OmniStateEntity, SensorEntity):
+class SiteRelayMetricSensor(SiteRelayEntity, SensorEntity):
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator, entry_id, url, sensor_def: dict) -> None:
@@ -44,7 +44,7 @@ class OmniStateMetricSensor(OmniStateEntity, SensorEntity):
         return None
 
 
-class OmniStateLastSeenSensor(OmniStateEntity, SensorEntity):
+class SiteRelayLastSeenSensor(SiteRelayEntity, SensorEntity):
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_name = "Last Seen"
 

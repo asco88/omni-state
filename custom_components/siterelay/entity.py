@@ -3,15 +3,15 @@ from __future__ import annotations
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
-from .coordinator import OmniStateCoordinator
+from .coordinator import SiteRelayCoordinator
 
 
-class OmniStateEntity(CoordinatorEntity[OmniStateCoordinator]):
+class SiteRelayEntity(CoordinatorEntity[SiteRelayCoordinator]):
     """Base entity: provides shared device_info and state helpers."""
 
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: OmniStateCoordinator, entry_id: str, url: str) -> None:
+    def __init__(self, coordinator: SiteRelayCoordinator, entry_id: str, url: str) -> None:
         super().__init__(coordinator)
         self._entry_id = entry_id
         self._url = url
@@ -20,8 +20,8 @@ class OmniStateEntity(CoordinatorEntity[OmniStateCoordinator]):
     def device_info(self) -> dict:
         return {
             "identifiers": {(DOMAIN, self._entry_id)},
-            "name": "OmniState",
-            "manufacturer": "OmniState",
+            "name": "SiteRelay",
+            "manufacturer": "SiteRelay",
             "model": "Server Dashboard",
             "configuration_url": self._url,
         }

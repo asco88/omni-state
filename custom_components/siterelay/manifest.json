@@ -1,0 +1,12 @@
+{
+  "domain": "siterelay",
+  "name": "SiteRelay",
+  "codeowners": ["@asco88"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/asco88/siterelay",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/asco88/siterelay/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

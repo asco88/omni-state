@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Real sensor collector for OmniState.
+Real sensor collector for SiteRelay.
 Reads actual system metrics every 5 s and checks service health.
 Pulls smart-home data from Home Assistant and pushes server metrics back.
 No external dependencies — pure stdlib.
@@ -48,15 +48,15 @@ WATCHED_SERVICES: list[tuple[str, str]] = [
     (s["id"], s["label"]) for s in _cfg.get("services", [])
 ]
 
-# HA sensor entities → pulled into OmniState sensors section
-# (omnistate_id, ha_entity_id, label, unit, min, max)
+# HA sensor entities → pulled into SiteRelay sensors section
+# (siterelay_id, ha_entity_id, label, unit, min, max)
 HA_SENSOR_MAP: list[tuple] = [
     (s["id"], s["entity"], s["label"], s["unit"], s.get("min", 0), s.get("max", 100))
     for s in _cfg.get("ha_sensors", [])
 ]
 
 # Server metrics to push back into HA as virtual sensor entities
-# (omnistate_sensor_id, ha_entity_id, ha_friendly_name, unit, icon)
+# (siterelay_sensor_id, ha_entity_id, ha_friendly_name, unit, icon)
 HA_PUSH_MAP: list[tuple] = [
     (p["metric"], p["entity"], p["label"], p["unit"], p.get("icon", "mdi:monitor"))
     for p in _cfg.get("ha_push", [])
@@ -199,7 +199,7 @@ _DEVICE_DOMAINS = {
 }
 
 # HA sensor entity prefixes to skip (virtual/internal)
-_SENSOR_SKIP_PREFIXES = ("sensor.omnistate_",)
+_SENSOR_SKIP_PREFIXES = ("sensor.siterelay_",)
 
 # Numeric states considered meaningful for sensor display
 def _is_numeric(val: str) -> bool:
@@ -265,7 +265,7 @@ def fetch_ha_devices(ha: "HaClient") -> dict:
 # ── HA Integration ─────────────────────────────────────────────────────────────
 
 def update_ha_sensors(state: dict, ha: HaClient) -> dict:
-    """Pull HA sensor values into OmniState sensors list."""
+    """Pull HA sensor values into SiteRelay sensors list."""
     existing = {s["id"] for s in state.get("sensors", [])}
     for oid, eid, label, unit, mn, mx in HA_SENSOR_MAP:
         raw = ha.get_state(eid)
@@ -290,11 +290,11 @@ def push_to_ha(state: dict, ha: HaClient) -> None:
     import datetime
 
     # Always push connection status so HA can detect when the agent goes offline
-    ha.push_sensor("sensor.omnistate_status", "online", {
-        "friendly_name": "OmniState Status",
+    ha.push_sensor("sensor.siterelay_status", "online", {
+        "friendly_name": "SiteRelay Status",
         "icon": "mdi:home-assistant",
         "last_seen": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "source": "omnistate",
+        "source": "siterelay",
     })
 
     vals = {s["id"]: s["value"] for s in state.get("sensors", [])}
@@ -304,7 +304,7 @@ def push_to_ha(state: dict, ha: HaClient) -> None:
                 "friendly_name": name,
                 "unit_of_measurement": unit,
                 "icon": icon,
-                "source": "omnistate",
+                "source": "siterelay",
             })
 
 

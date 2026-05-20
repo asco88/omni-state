@@ -1,4 +1,4 @@
-DOMAIN = "omnistate"
+DOMAIN = "siterelay"
 CONF_URL = "url"
 CONF_TOKEN = "token"
 SCAN_INTERVAL = 30

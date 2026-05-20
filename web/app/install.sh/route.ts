@@ -3,12 +3,12 @@ import { NextResponse } from "next/server";
 const SCRIPT = `#!/usr/bin/env bash
 set -e
 
-REPO="https://github.com/asco88/omni-state"
-INSTALL_DIR="\$HOME/omni-state"
-SERVICE="omnistate"
+REPO="https://github.com/asco88/siterelay"
+INSTALL_DIR="\$HOME/siterelay"
+SERVICE="siterelay"
 
 echo ""
-echo "  OmniState Agent Installer"
+echo "  SiteRelay Agent Installer"
 echo "  ─────────────────────────"
 echo ""
 
@@ -37,12 +37,12 @@ if [ ! -f config.json ]; then
   cp config.json.example config.json
 fi
 
-DASHBOARD_URL="\${OMNISTATE_URL:-https://omni-state.vercel.app}"
+DASHBOARD_URL="\${OMNISTATE_URL:-https://siterelay.app}"
 
 # Prompt for token if not set
 if [ -z "\$OMNISTATE_TOKEN" ]; then
   echo ""
-  printf "Paste your OmniState token (from the onboarding wizard): "
+  printf "Paste your SiteRelay token (from the onboarding wizard): "
   read -r OMNISTATE_TOKEN
 fi
 
@@ -52,7 +52,7 @@ import json, os
 path = "config.json"
 with open(path) as f:
     cfg = json.load(f)
-cfg["vercel_url"] = os.environ.get("OMNISTATE_URL", "https://omni-state.vercel.app")
+cfg["vercel_url"] = os.environ.get("OMNISTATE_URL", "https://siterelay.app")
 cfg["api_key"]    = os.environ.get("OMNISTATE_TOKEN", "")
 with open(path, "w") as f:
     json.dump(cfg, f, indent=2)
@@ -75,7 +75,7 @@ if command -v systemctl >/dev/null 2>&1; then
   SERVICE_FILE="/etc/systemd/system/\$SERVICE.service"
   sudo tee "\$SERVICE_FILE" >/dev/null <<EOF
 [Unit]
-Description=OmniState Agent
+Description=SiteRelay Agent
 After=network.target
 
 [Service]
@@ -104,7 +104,7 @@ else
 fi
 
 echo ""
-echo "  Done! Return to the OmniState dashboard and click 'I\\'ve started the agent'."
+echo "  Done! Return to the SiteRelay dashboard and click 'I\\'ve started the agent'."
 echo ""
 `;
 

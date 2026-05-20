@@ -6,25 +6,25 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, CONF_URL
-from .coordinator import OmniStateCoordinator
-from .entity import OmniStateEntity
+from .coordinator import SiteRelayCoordinator
+from .entity import SiteRelayEntity
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    coordinator: OmniStateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: SiteRelayCoordinator = hass.data[DOMAIN][entry.entry_id]
     url = entry.data[CONF_URL]
 
-    entities: list[OmniStateEntity] = [OmniStateServerSensor(coordinator, entry.entry_id, url)]
+    entities: list[SiteRelayEntity] = [SiteRelayServerSensor(coordinator, entry.entry_id, url)]
 
     for svc in (coordinator.data or {}).get("state", {}).get("services", []):
-        entities.append(OmniStateServiceSensor(coordinator, entry.entry_id, url, svc))
+        entities.append(SiteRelayServiceSensor(coordinator, entry.entry_id, url, svc))
 
     async_add_entities(entities)
 
 
-class OmniStateServerSensor(OmniStateEntity, BinarySensorEntity):
+class SiteRelayServerSensor(SiteRelayEntity, BinarySensorEntity):
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_name = "Server"
 
@@ -37,7 +37,7 @@ class OmniStateServerSensor(OmniStateEntity, BinarySensorEntity):
         return bool((self.coordinator.data or {}).get("serverOnline", False))
 
 
-class OmniStateServiceSensor(OmniStateEntity, BinarySensorEntity):
+class SiteRelayServiceSensor(SiteRelayEntity, BinarySensorEntity):
     _attr_device_class = BinarySensorDeviceClass.RUNNING
 
     def __init__(self, coordinator, entry_id, url, svc: dict) -> None:

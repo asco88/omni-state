@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-OmniState agent — bidirectional relay between local files and the Vercel cloud UI.
+SiteRelay agent — bidirectional relay between local files and the Vercel cloud UI.
 
 Watches:
   - OMNISTATE_FILE      (default: sensors.json)        → /api/update-state
-  - OMNISTATE_STYLE_FILE (default: omni-state-style.json) → /api/update-style
+  - OMNISTATE_STYLE_FILE (default: siterelay-style.json) → /api/update-style
 
 Cloud → local sync:
   - Polls /api/get-desired-state  every 5 s → writes OMNISTATE_FILE
@@ -42,7 +42,7 @@ def _get(env_key: str, cfg_key: str, default: str = "") -> str:
 VERCEL_URL          = _get("OMNISTATE_URL", "vercel_url").rstrip("/")
 API_KEY             = _get("OMNISTATE_API_KEY", "api_key", "")
 DATA_FILE           = Path(os.environ.get("OMNISTATE_FILE",       "sensors.json"))
-STYLE_FILE          = Path(os.environ.get("OMNISTATE_STYLE_FILE", "omni-state-style.json"))
+STYLE_FILE          = Path(os.environ.get("OMNISTATE_STYLE_FILE", "siterelay-style.json"))
 HEARTBEAT_INTERVAL  = 30   # seconds
 CLOUD_POLL_INTERVAL = 30   # seconds — how often to poll for desired state / commands
 STYLE_POLL_INTERVAL = 120  # seconds — style changes rarely, poll less frequently
@@ -52,14 +52,14 @@ HA_URL    = _get("HA_URL",    "ha_url",    "http://homeassistant.local:8123")
 HA_TOKEN  = _get("HA_TOKEN",  "ha_token",  "")
 RADIO_URL = _get("RADIO_URL", "radio_url", "http://localhost:3013")
 
-# Maps OmniState toggle IDs → HA entity IDs for direct switch control
+# Maps SiteRelay toggle IDs → HA entity IDs for direct switch control
 HA_SWITCH_ENTITIES: dict[str, str] = {
     s["id"]: s["entity"]
     for s in _cfg.get("ha_switches", [])
     if s.get("entity")
 }
 
-# Maps OmniState action IDs → HA automation/script entity IDs
+# Maps SiteRelay action IDs → HA automation/script entity IDs
 HA_ACTION_ENTITIES: dict[str, str] = {
     a["id"]: a["entity"]
     for a in _cfg.get("ha_actions", [])
@@ -73,7 +73,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-log = logging.getLogger("omnistate")
+log = logging.getLogger("siterelay")
 
 # ── HTTP helpers ──────────────────────────────────────────────────────────────
 
@@ -327,10 +327,10 @@ def main() -> None:
     if not VERCEL_URL:
         raise SystemExit(
             "Set OMNISTATE_URL to your Vercel deployment URL, e.g.:\n"
-            "  export OMNISTATE_URL=https://omni-state.vercel.app"
+            "  export OMNISTATE_URL=https://siterelay.vercel.app"
         )
 
-    log.info("OmniState agent starting")
+    log.info("SiteRelay agent starting")
     log.info("  State file : %s", DATA_FILE.resolve())
     log.info("  Style file : %s", STYLE_FILE.resolve())
     log.info("  Target     : %s", VERCEL_URL)

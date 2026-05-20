@@ -8,24 +8,24 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, CONF_URL
-from .coordinator import OmniStateCoordinator
-from .entity import OmniStateEntity
+from .coordinator import SiteRelayCoordinator
+from .entity import SiteRelayEntity
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    coordinator: OmniStateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: SiteRelayCoordinator = hass.data[DOMAIN][entry.entry_id]
     url = entry.data[CONF_URL]
 
     entities = [
-        OmniStateButton(coordinator, entry.entry_id, url, action)
+        SiteRelayButton(coordinator, entry.entry_id, url, action)
         for action in (coordinator.data or {}).get("state", {}).get("actions", [])
     ]
     async_add_entities(entities)
 
 
-class OmniStateButton(OmniStateEntity, ButtonEntity):
+class SiteRelayButton(SiteRelayEntity, ButtonEntity):
     def __init__(self, coordinator, entry_id, url, action: dict) -> None:
         super().__init__(coordinator, entry_id, url)
         self._id = action["id"]

@@ -10,7 +10,7 @@ type HaTab     = "hacs" | "manual";
 type AgentTab  = "guided" | "manual";
 type Step = 1 | 2 | 3;
 
-const REPO = "https://github.com/asco88/omni-state";
+const REPO = "https://github.com/asco88/siterelay";
 
 // ── Root ─────────────────────────────────────────────────────────────────────
 
@@ -46,7 +46,7 @@ export default function OnboardingPage() {
       <div className="w-full max-w-xl flex flex-col gap-8">
         <div className="flex flex-col gap-1">
           <a href="/" className="text-sm font-bold tracking-tight mb-2 self-start" style={{ color: "#3b82f6" }}>
-            OmniState
+            SiteRelay
           </a>
           <StepIndicator current={step} />
         </div>
@@ -107,7 +107,7 @@ function Step1({ onSelect }: { onSelect: (t: IntegrationType) => void }) {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold">Add your first integration</h1>
-        <p style={{ color: "#94a3b8" }}>Choose how you want to connect your home server to OmniState.</p>
+        <p style={{ color: "#94a3b8" }}>Choose how you want to connect your home server to SiteRelay.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -221,7 +221,7 @@ function Step2HA({ token, onTokenGenerated, onContinue }: {
   token: string | null; onTokenGenerated: (t: string) => void; onContinue: () => void;
 }) {
   const [tab, setTab] = useState<HaTab>("hacs");
-  const DASHBOARD_URL = typeof window !== "undefined" ? window.location.origin : "https://omni-state.vercel.app";
+  const DASHBOARD_URL = typeof window !== "undefined" ? window.location.origin : "https://siterelay.app";
 
   function copy(text: string) { navigator.clipboard.writeText(text); }
 
@@ -243,12 +243,12 @@ function Step2HA({ token, onTokenGenerated, onContinue }: {
           <Steps items={[
             <>Open HA → <B>HACS</B> → three-dot menu → <B>Custom repositories</B></>,
             <>Add <Code>{REPO}</Code> — category: <B>Integration</B></>,
-            <>Search for <B>OmniState</B> in HACS → <B>Download</B></>,
+            <>Search for <B>SiteRelay</B> in HACS → <B>Download</B></>,
             <>Restart Home Assistant</>,
           ]} />
         ) : (
           <Steps items={[
-            <>Copy <Code>custom_components/omnistate/</Code> from the <a href={REPO} target="_blank" rel="noopener noreferrer" style={{ color: "#3b82f6" }}>GitHub repo</a> into your HA <Code>/config/custom_components/</Code> directory</>,
+            <>Copy <Code>custom_components/siterelay/</Code> from the <a href={REPO} target="_blank" rel="noopener noreferrer" style={{ color: "#3b82f6" }}>GitHub repo</a> into your HA <Code>/config/custom_components/</Code> directory</>,
             <>Restart Home Assistant</>,
           ]} />
         )}
@@ -256,7 +256,7 @@ function Step2HA({ token, onTokenGenerated, onContinue }: {
 
       <TokenSection
         token={token}
-        description="Generate a token and paste it into the OmniState integration in HA."
+        description="Generate a token and paste it into the SiteRelay integration in HA."
         onGenerated={onTokenGenerated}
       />
 
@@ -266,7 +266,7 @@ function Step2HA({ token, onTokenGenerated, onContinue }: {
           style={{ backgroundColor: "#1e293b", borderColor: "#334155" }}
         >
           <p className="text-sm font-medium">
-            In Home Assistant → Settings → Integrations → Add → search <span style={{ color: "#3b82f6" }}>OmniState</span>, then enter:
+            In Home Assistant → Settings → Integrations → Add → search <span style={{ color: "#3b82f6" }}>SiteRelay</span>, then enter:
           </p>
           <div className="flex flex-col gap-2">
             <Field label="Dashboard URL" value={DASHBOARD_URL} onCopy={copy} />
@@ -294,7 +294,7 @@ function Step2Agent({ token, onTokenGenerated, onContinue }: {
   token: string | null; onTokenGenerated: (t: string) => void; onContinue: () => void;
 }) {
   const [tab, setTab] = useState<AgentTab>("guided");
-  const DASHBOARD_URL = typeof window !== "undefined" ? window.location.origin : "https://omni-state.vercel.app";
+  const DASHBOARD_URL = typeof window !== "undefined" ? window.location.origin : "https://siterelay.app";
 
   const configSnippet = `{
   "vercel_url": "${DASHBOARD_URL}",
@@ -306,7 +306,7 @@ function Step2Agent({ token, onTokenGenerated, onContinue }: {
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold">Install the server agent</h1>
         <p style={{ color: "#94a3b8" }}>
-          A lightweight Python process that collects metrics and pushes them to OmniState every 15 seconds.
+          A lightweight Python process that collects metrics and pushes them to SiteRelay every 15 seconds.
           Runs on any Ubuntu / Debian machine.
         </p>
       </div>
@@ -332,7 +332,7 @@ function Step2Agent({ token, onTokenGenerated, onContinue }: {
               <>Clone the repo on your server:</>,
             ]} />
             <ShellBlock>{`git clone ${REPO}
-cd omni-state
+cd siterelay
 pip install requests psutil`}</ShellBlock>
             <Steps items={[
               <>Copy the example config and fill in your token:</>,
@@ -391,7 +391,7 @@ function Step3({ integration, connected, onDone }: {
           </div>
           <div className="flex flex-col gap-2">
             <h1 className="text-2xl font-bold">Connected!</h1>
-            <p style={{ color: "#94a3b8" }}>OmniState is receiving data from {source}.</p>
+            <p style={{ color: "#94a3b8" }}>SiteRelay is receiving data from {source}.</p>
           </div>
           <button
             onClick={onDone}

@@ -12,7 +12,7 @@ export default async function LoginPage() {
       style={{ backgroundColor: "#0f172a", color: "#f1f5f9" }}
     >
       <div className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight mb-2">OmniState</h1>
+        <h1 className="text-4xl font-bold tracking-tight mb-2">SiteRelay</h1>
         <p style={{ color: "#94a3b8" }}>Your home server dashboard</p>
       </div>
 

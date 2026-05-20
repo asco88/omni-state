@@ -791,7 +791,7 @@ function ServerSetupPanel({ open, onClose }: { open: boolean; onClose: () => voi
     setTimeout(() => setCopied(false), 2000);
   }
 
-  const origin  = typeof window !== "undefined" ? window.location.origin : "https://omni-state.vercel.app";
+  const origin  = typeof window !== "undefined" ? window.location.origin : "https://siterelay.app";
   const masked  = token ? `${token.slice(0, 8)}${"·".repeat(20)}${token.slice(-4)}` : "—";
   const display = loading ? "Loading…" : (shown && token ? token : masked);
 
@@ -1173,7 +1173,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className={`w-full flex items-start justify-between ${activeStyle.desktopLayout === "twoCol" ? "max-w-2xl lg:max-w-5xl" : "max-w-2xl"}`}>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-1">OmniState</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-1">SiteRelay</h1>
           <p className="text-sm" style={{ color: "var(--text-2)" }}>Live sensor relay from your home server</p>
         </div>
         <div className="flex items-center gap-2 mt-1">
@@ -1251,7 +1251,7 @@ export default function Dashboard() {
                 Last seen: {timeAgo(serverData.serverLastSeen)} ({formatTs(serverData.serverLastSeen)})
               </div>
               <div style={{ color: "var(--text-3)" }}>
-                Check: <code>sudo systemctl status omnistate</code>
+                Check: <code>sudo systemctl status siterelay</code>
               </div>
             </>
           ) : (

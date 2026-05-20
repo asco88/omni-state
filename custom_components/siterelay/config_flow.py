@@ -9,7 +9,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import DOMAIN, CONF_URL, CONF_TOKEN
 
 
-class OmniStateConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class SiteRelayConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
@@ -29,7 +29,7 @@ class OmniStateConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         await self.async_set_unique_id(url)
                         self._abort_if_unique_id_configured()
                         return self.async_create_entry(
-                            title="OmniState",
+                            title="SiteRelay",
                             data={CONF_URL: url, CONF_TOKEN: token},
                         )
                     if resp.status == 401:
@@ -45,7 +45,7 @@ class OmniStateConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_URL, default="https://omni-state.vercel.app"): str,
+                    vol.Required(CONF_URL, default="https://siterelay.app"): str,
                     vol.Required(CONF_TOKEN): str,
                 }
             ),

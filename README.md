@@ -1,8 +1,8 @@
-# OmniState
+# SiteRelay
 
 Real-time remote dashboard for self-hosters. Monitor your Home Assistant instance and Linux servers from anywhere — no VPN, no port forwarding, no cloud subscription required for the core experience.
 
-**[→ omni-state.vercel.app](https://omni-state.vercel.app)**
+**[→ siterelay.vercel.app](https://siterelay.vercel.app)**
 
 ---
 
@@ -19,26 +19,26 @@ Real-time remote dashboard for self-hosters. Monitor your Home Assistant instanc
 
 ### Hosted (easiest)
 
-1. Go to **[omni-state.vercel.app](https://omni-state.vercel.app)** and sign in with Google
+1. Go to **[siterelay.vercel.app](https://siterelay.vercel.app)** and sign in with Google
 2. Click **Add integration → Home Assistant**
-3. Install the OmniState integration via HACS (or manually)
+3. Install the SiteRelay integration via HACS (or manually)
 4. Generate a token in the wizard and paste it into HA
 5. Your dashboard populates automatically
 
 ### Home Assistant integration — HACS
 
 1. Open HACS → ⋮ → Custom repositories
-2. Add `https://github.com/asco88/omni-state` — category: **Integration**
-3. Search for **OmniState** and click Download
+2. Add `https://github.com/asco88/siterelay` — category: **Integration**
+3. Search for **SiteRelay** and click Download
 4. Restart Home Assistant
-5. Settings → Integrations → Add → OmniState → enter your dashboard URL and token
+5. Settings → Integrations → Add → SiteRelay → enter your dashboard URL and token
 
 ### Home Assistant integration — Manual
 
-Copy `custom_components/omnistate/` into your HA config directory:
+Copy `custom_components/siterelay/` into your HA config directory:
 
 ```bash
-cp -r custom_components/omnistate/ /config/custom_components/
+cp -r custom_components/siterelay/ /config/custom_components/
 ```
 
 Restart HA and add the integration as above.
@@ -48,14 +48,14 @@ Restart HA and add the integration as above.
 Run the guided installer on your Ubuntu/Debian server:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/asco88/omni-state/main/setup.sh | bash
+curl -fsSL https://raw.githubusercontent.com/asco88/siterelay/main/setup.sh | bash
 ```
 
 Or manually:
 
 ```bash
-git clone https://github.com/asco88/omni-state
-cd omni-state
+git clone https://github.com/asco88/siterelay
+cd siterelay
 cp config.json.example config.json
 # edit config.json with your settings
 python3 agent.py
@@ -90,11 +90,11 @@ The full stack is a Next.js app (Vercel) + Upstash KV. To self-host:
 ## Project layout
 
 ```
-omni-state/
+siterelay/
 ├── web/                        # Next.js app
 │   ├── app/                    # Pages and API routes
 │   └── lib/                    # Shared utilities (KV keys, auth)
-├── custom_components/omnistate/ # Home Assistant integration
+├── custom_components/siterelay/ # Home Assistant integration
 ├── agent.py                    # Cloud sync agent (Linux server)
 ├── real_sensors.py             # Hardware sensor collector
 ├── setup.sh                    # Guided installer

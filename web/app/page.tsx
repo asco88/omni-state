@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { signIn } from "@/auth";
 
 export const metadata = {
-  title: "OmniState — Your home server dashboard",
+  title: "SiteRelay — Your home server dashboard",
   description:
     "Remote dashboard for self-hosters. Monitor your home server, Home Assistant, and connected devices from anywhere — no VPN, no port forwarding.",
 };
@@ -32,7 +32,7 @@ function Nav() {
       style={{ borderColor: "#1e293b" }}
     >
       <div className="flex items-center gap-2">
-        <span className="text-xl font-bold tracking-tight">OmniState</span>
+        <span className="text-xl font-bold tracking-tight">SiteRelay</span>
         <span
           className="text-xs px-2 py-0.5 rounded-full font-medium"
           style={{ backgroundColor: "#1e293b", color: "#64748b" }}
@@ -42,7 +42,7 @@ function Nav() {
       </div>
       <div className="flex items-center gap-4">
         <a
-          href="https://github.com/assafco/omni-state"
+          href="https://github.com/asco88/siterelay"
           target="_blank"
           rel="noopener noreferrer"
           className="text-sm transition-colors"
@@ -86,7 +86,7 @@ function Hero() {
           <span style={{ color: "#3b82f6" }}>visible from anywhere</span>
         </h1>
         <p className="text-lg max-w-xl mx-auto" style={{ color: "#94a3b8" }}>
-          OmniState is a real-time remote dashboard for self-hosters. Connect
+          SiteRelay is a real-time remote dashboard for self-hosters. Connect
           your Home Assistant instance or Linux server and see everything — live
           — from any browser, no VPN or port forwarding needed.
         </p>
@@ -95,7 +95,7 @@ function Hero() {
       <div className="flex flex-col sm:flex-row items-center gap-3">
         <SignInButton />
         <a
-          href="https://github.com/assafco/omni-state"
+          href="https://github.com/asco88/siterelay"
           target="_blank"
           rel="noopener noreferrer"
           className="text-sm px-4 py-2 rounded-lg font-medium border transition-colors hover:border-slate-500"
@@ -129,7 +129,7 @@ function DashboardPreview() {
         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#f59e0b" }} />
         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#22c55e" }} />
         <span className="ml-3 text-xs" style={{ color: "#475569" }}>
-          omni-state.vercel.app
+          siterelay.app
         </span>
       </div>
 
@@ -226,7 +226,7 @@ const FEATURES = [
   {
     icon: "🏠",
     title: "Home Assistant native",
-    body: "Install the OmniState custom integration via HACS or manually. All your HA sensors, switches, and automations appear as HA entities — no extra config.",
+    body: "Install the SiteRelay custom integration via HACS or manually. All your HA sensors, switches, and automations appear as HA entities — no extra config.",
   },
   {
     icon: "🔒",
@@ -246,7 +246,7 @@ const FEATURES = [
   {
     icon: "🔓",
     title: "Open source",
-    body: "MIT licensed. Explore the code, contribute integrations, or self-host the entire stack. The community shapes what OmniState becomes.",
+    body: "MIT licensed. Explore the code, contribute integrations, or self-host the entire stack. The community shapes what SiteRelay becomes.",
   },
 ];
 
@@ -300,7 +300,7 @@ const STEPS = [
   {
     n: "4",
     title: "Watch it go live",
-    body: "Return to OmniState and your dashboard populates automatically. Sensors, services, controls — all there.",
+    body: "Return to SiteRelay and your dashboard populates automatically. Sensors, services, controls — all there.",
   },
 ];
 
@@ -351,10 +351,10 @@ function Footer() {
       className="mt-auto border-t px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm"
       style={{ borderColor: "#1e293b", color: "#475569" }}
     >
-      <span>OmniState — MIT License</span>
+      <span>SiteRelay — MIT License</span>
       <div className="flex items-center gap-6">
         <a
-          href="https://github.com/assafco/omni-state"
+          href="https://github.com/asco88/siterelay"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-slate-300 transition-colors"

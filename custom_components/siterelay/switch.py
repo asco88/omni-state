@@ -8,24 +8,24 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, CONF_URL
-from .coordinator import OmniStateCoordinator
-from .entity import OmniStateEntity
+from .coordinator import SiteRelayCoordinator
+from .entity import SiteRelayEntity
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    coordinator: OmniStateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: SiteRelayCoordinator = hass.data[DOMAIN][entry.entry_id]
     url = entry.data[CONF_URL]
 
     entities = [
-        OmniStateSwitch(coordinator, entry.entry_id, url, toggle)
+        SiteRelaySwitch(coordinator, entry.entry_id, url, toggle)
         for toggle in (coordinator.data or {}).get("state", {}).get("toggles", [])
     ]
     async_add_entities(entities)
 
 
-class OmniStateSwitch(OmniStateEntity, SwitchEntity):
+class SiteRelaySwitch(SiteRelayEntity, SwitchEntity):
     def __init__(self, coordinator, entry_id, url, toggle: dict) -> None:
         super().__init__(coordinator, entry_id, url)
         self._id = toggle["id"]

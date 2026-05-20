@@ -1,6 +1,6 @@
-# OmniState — Installation Guide
+# SiteRelay — Installation Guide
 
-OmniState is a personal server dashboard that shows live system metrics and smart-home controls in a cloud-hosted UI. It has two parts:
+SiteRelay is a personal server dashboard that shows live system metrics and smart-home controls in a cloud-hosted UI. It has two parts:
 
 - **Cloud UI** — a Next.js app deployed on Vercel (free tier works fine)
 - **Server agent** — two Python scripts that run on your home server (Linux / Ubuntu)
@@ -31,7 +31,7 @@ OmniState is a personal server dashboard that shows live system metrics and smar
    npx vercel --prod   # deploy to production
    ```
 
-3. Note the production URL shown at the end (e.g. `https://omni-state.vercel.app`).
+3. Note the production URL shown at the end (e.g. `https://siterelay.vercel.app`).
 
 > You only do this once. After that, `npx vercel --prod` redeploys in ~30 s.
 
@@ -43,7 +43,7 @@ Skip this section if you don't use Home Assistant.
 
 1. In the HA web UI, click your **profile picture** (bottom-left).
 2. Scroll to **Security → Long-Lived Access Tokens**.
-3. Click **Create Token**, give it a name (e.g. "OmniState"), and copy the token.
+3. Click **Create Token**, give it a name (e.g. "SiteRelay"), and copy the token.
 
    > The token is shown only once — save it somewhere safe.
 
@@ -58,14 +58,14 @@ Copy the project files to your server:
 ```bash
 # From your dev machine
 rsync -az --exclude='node_modules' --exclude='.git' \
-  /path/to/omni-state/ user@your-server:~/omni-state/
+  /path/to/siterelay/ user@your-server:~/siterelay/
 ```
 
 SSH into your server and run the guided installer:
 
 ```bash
 ssh user@your-server
-cd ~/omni-state
+cd ~/siterelay
 bash setup.sh
 ```
 
@@ -73,14 +73,14 @@ The script will ask for three things:
 
 | Prompt | Example value |
 |--------|---------------|
-| Vercel URL | `https://omni-state.vercel.app` |
+| Vercel URL | `https://siterelay.vercel.app` |
 | HA URL | `http://homeassistant.local:8123` |
 | HA Token | `eyJhbGci...` (from Step 2) |
 
 It then:
 - Writes `config.json` with your settings
 - Installs Python dependencies (`watchdog`, `requests`)
-- Registers and starts two systemd services (`real-sensors`, `omnistate`)
+- Registers and starts two systemd services (`real-sensors`, `siterelay`)
 
 That's it. Open your Vercel URL — data should appear within 10 seconds.
 
@@ -91,7 +91,7 @@ That's it. Open your Vercel URL — data should appear within 10 seconds.
 | Service | Script | Role |
 |---------|--------|------|
 | `real-sensors` | `real_sensors.py` | Reads CPU/memory/disk/network every 5 s; pulls HA sensor states |
-| `omnistate` | `agent.py` | Watches for file changes and syncs them to Vercel KV; relays UI commands to HA |
+| `siterelay` | `agent.py` | Watches for file changes and syncs them to Vercel KV; relays UI commands to HA |
 
 Both services start automatically on boot and restart on failure.
 
@@ -115,11 +115,11 @@ Re-run `bash setup.sh` any time to update values. Environment variables (`OMNIST
 
 ## Home Assistant Integration
 
-Once connected, OmniState automatically:
+Once connected, SiteRelay automatically:
 
 - **Pulls** solar power, battery level, and any other sensors you configure
 - **Reflects** all switch/light/input_boolean states in real time
-- **Pushes** server metrics (CPU, memory, disk, network) back to HA as virtual sensors (`sensor.omnistate_*`)
+- **Pushes** server metrics (CPU, memory, disk, network) back to HA as virtual sensors (`sensor.siterelay_*`)
 - **Controls** switches and lights bidirectionally from the dashboard
 - **Triggers** HA automations via remote action buttons
 
@@ -131,7 +131,7 @@ To browse and pin HA devices to your dashboard, click the **🔌 Integrations** 
 
 **No data in the UI**
 ```bash
-journalctl -u omnistate -n 50
+journalctl -u siterelay -n 50
 # Look for: "OMNISTATE_URL is not set" or connection errors
 ```
 
@@ -143,13 +143,13 @@ journalctl -u real-sensors -n 50
 ```
 
 **Switches not responding**
-- Check `journalctl -u omnistate -f` for HA service call errors
+- Check `journalctl -u siterelay -f` for HA service call errors
 - Confirm the HA token has not expired (create a new one if needed)
 
 **Services not starting after reboot**
 ```bash
-sudo systemctl status real-sensors omnistate
-sudo systemctl enable real-sensors omnistate   # if not already enabled
+sudo systemctl status real-sensors siterelay
+sudo systemctl enable real-sensors siterelay   # if not already enabled
 ```
 
 ---

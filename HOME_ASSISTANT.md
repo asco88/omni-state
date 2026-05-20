@@ -1,6 +1,6 @@
 # Home Assistant Integration
 
-OmniState connects to Home Assistant over your local network using its built-in REST API. No add-ons, no HACS, no custom components required.
+SiteRelay connects to Home Assistant over your local network using its built-in REST API. No add-ons, no HACS, no custom components required.
 
 ---
 
@@ -10,7 +10,7 @@ OmniState connects to Home Assistant over your local network using its built-in 
 - A **Long-Lived Access Token** from HA (see Step 1)
 - The **local URL** of your HA instance (e.g. `http://homeassistant.local:8123`)
 
-The server running OmniState must be able to reach HA over the network. If they're on the same LAN this just works.
+The server running SiteRelay must be able to reach HA over the network. If they're on the same LAN this just works.
 
 ---
 
@@ -19,7 +19,7 @@ The server running OmniState must be able to reach HA over the network. If they'
 1. Open Home Assistant in your browser
 2. Click your **profile picture** in the bottom-left
 3. Scroll down to **Security → Long-Lived Access Tokens**
-4. Click **Create Token**, give it a name like `OmniState`, and copy the token
+4. Click **Create Token**, give it a name like `SiteRelay`, and copy the token
 
 > The token is shown only once. Keep it somewhere safe.
 
@@ -37,7 +37,7 @@ You should see `{"message": "API running."}`.
 
 ## Step 2 — Add to config.json
 
-Open `config.json` in the OmniState directory and add your HA URL and token:
+Open `config.json` in the SiteRelay directory and add your HA URL and token:
 
 ```json
 {
@@ -52,7 +52,7 @@ Open `config.json` in the OmniState directory and add your HA URL and token:
 Then restart the services:
 
 ```bash
-sudo systemctl restart real-sensors omnistate
+sudo systemctl restart real-sensors siterelay
 ```
 
 That's it — the integration is live. Check logs to confirm:
@@ -66,7 +66,7 @@ journalctl -u real-sensors -f
 
 ## What you get immediately
 
-Once connected, OmniState automatically:
+Once connected, SiteRelay automatically:
 
 - **Discovers all your entities** — every switch, light, sensor, media player, binary sensor, and input boolean
 - **Shows live states** — updated every 5 seconds
@@ -105,11 +105,11 @@ To pull specific HA sensor values into the Sensors section (the progress bars at
 
 ---
 
-## Built-in: OmniState status sensor
+## Built-in: SiteRelay status sensor
 
-Whenever the OmniState agent is running and connected to Home Assistant, it automatically pushes a `sensor.omnistate_status` entity. No configuration needed.
+Whenever the SiteRelay agent is running and connected to Home Assistant, it automatically pushes a `sensor.siterelay_status` entity. No configuration needed.
 
-In HA, go to **Settings → Devices & Services → Entities** and search for `omnistate_status`. You'll see:
+In HA, go to **Settings → Devices & Services → Entities** and search for `siterelay_status`. You'll see:
 
 | Attribute | Value |
 |-----------|-------|
@@ -119,29 +119,29 @@ In HA, go to **Settings → Devices & Services → Entities** and search for `om
 
 > **Important:** HA's virtual sensor injection does not auto-expire — the sensor stays at `online` even after the agent stops. Use the `last_updated` attribute or the template below to detect actual downtime.
 
-### Alert when OmniState goes offline
+### Alert when SiteRelay goes offline
 
 Create a HA automation that notifies you if the agent hasn't checked in for more than 2 minutes:
 
 ```yaml
-alias: OmniState offline alert
+alias: SiteRelay offline alert
 trigger:
   - platform: template
     value_template: >
-      {{ (now().timestamp() - state_attr('sensor.omnistate_status', 'last_seen')
+      {{ (now().timestamp() - state_attr('sensor.siterelay_status', 'last_seen')
           | as_datetime | as_timestamp) > 120 }}
 action:
   - service: notify.notify
     data:
-      message: "OmniState agent has been offline for more than 2 minutes."
+      message: "SiteRelay agent has been offline for more than 2 minutes."
 ```
 
 Or add it to a HA dashboard card to see freshness at a glance:
 
 ```yaml
 type: entity
-entity: sensor.omnistate_status
-name: OmniState
+entity: sensor.siterelay_status
+name: SiteRelay
 secondary_info: last-updated
 ```
 
@@ -181,16 +181,16 @@ Supported entity types: `automation.*` (triggers the automation), `script.*` (ru
 
 ## Optional: Push server metrics back to HA
 
-OmniState can push your server's CPU, memory, disk, and network usage back into Home Assistant as virtual sensor entities. This lets you use them in HA dashboards, automations, and alerts.
+SiteRelay can push your server's CPU, memory, disk, and network usage back into Home Assistant as virtual sensor entities. This lets you use them in HA dashboards, automations, and alerts.
 
 Add `ha_push` to `config.json`:
 
 ```json
 "ha_push": [
-  { "metric": "cpu",    "entity": "sensor.omnistate_cpu",    "label": "Server CPU",     "unit": "%",    "icon": "mdi:cpu-64-bit" },
-  { "metric": "memory", "entity": "sensor.omnistate_memory", "label": "Server Memory",  "unit": "%",    "icon": "mdi:memory"     },
-  { "metric": "disk",   "entity": "sensor.omnistate_disk",   "label": "Server Disk",    "unit": "%",    "icon": "mdi:harddisk"   },
-  { "metric": "net_rx", "entity": "sensor.omnistate_net_rx", "label": "Server Network", "unit": "KB/s", "icon": "mdi:network"    }
+  { "metric": "cpu",    "entity": "sensor.siterelay_cpu",    "label": "Server CPU",     "unit": "%",    "icon": "mdi:cpu-64-bit" },
+  { "metric": "memory", "entity": "sensor.siterelay_memory", "label": "Server Memory",  "unit": "%",    "icon": "mdi:memory"     },
+  { "metric": "disk",   "entity": "sensor.siterelay_disk",   "label": "Server Disk",    "unit": "%",    "icon": "mdi:harddisk"   },
+  { "metric": "net_rx", "entity": "sensor.siterelay_net_rx", "label": "Server Network", "unit": "KB/s", "icon": "mdi:network"    }
 ]
 ```
 
@@ -224,10 +224,10 @@ The entities appear in HA automatically (no restart needed) and update every 5 s
   ],
 
   "ha_push": [
-    { "metric": "cpu",    "entity": "sensor.omnistate_cpu",    "label": "Server CPU",    "unit": "%",    "icon": "mdi:cpu-64-bit" },
-    { "metric": "memory", "entity": "sensor.omnistate_memory", "label": "Server Memory", "unit": "%",    "icon": "mdi:memory"     },
-    { "metric": "disk",   "entity": "sensor.omnistate_disk",   "label": "Server Disk",   "unit": "%",    "icon": "mdi:harddisk"   },
-    { "metric": "net_rx", "entity": "sensor.omnistate_net_rx", "label": "Server Network","unit": "KB/s", "icon": "mdi:network"    }
+    { "metric": "cpu",    "entity": "sensor.siterelay_cpu",    "label": "Server CPU",    "unit": "%",    "icon": "mdi:cpu-64-bit" },
+    { "metric": "memory", "entity": "sensor.siterelay_memory", "label": "Server Memory", "unit": "%",    "icon": "mdi:memory"     },
+    { "metric": "disk",   "entity": "sensor.siterelay_disk",   "label": "Server Disk",   "unit": "%",    "icon": "mdi:harddisk"   },
+    { "metric": "net_rx", "entity": "sensor.siterelay_net_rx", "label": "Server Network","unit": "KB/s", "icon": "mdi:network"    }
   ]
 }
 ```
@@ -235,7 +235,7 @@ The entities appear in HA automatically (no restart needed) and update every 5 s
 After any config change:
 
 ```bash
-sudo systemctl restart real-sensors omnistate
+sudo systemctl restart real-sensors siterelay
 ```
 
 ---
@@ -258,7 +258,7 @@ journalctl -u real-sensors -n 50 | grep -i "ha\|error"
 
 **Switches not responding to dashboard commands:**
 ```bash
-journalctl -u omnistate -f
+journalctl -u siterelay -f
 # look for lines starting with "HA switch" or "HA service"
 ```
 

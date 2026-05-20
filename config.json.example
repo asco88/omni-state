@@ -14,7 +14,7 @@
   "services": [
     { "id": "nginx",     "label": "Nginx"  },
     { "id": "docker",    "label": "Docker" },
-    { "id": "omnistate", "label": "OmniState Agent" }
+    { "id": "omnistate", "label": "SiteRelay Agent" }
   ],
 
   "ha_sensors": [
@@ -37,10 +37,10 @@
   ],
 
   "ha_push": [
-    { "metric": "cpu",    "entity": "sensor.omnistate_cpu",    "label": "OmniState CPU",     "unit": "%",    "icon": "mdi:cpu-64-bit" },
-    { "metric": "memory", "entity": "sensor.omnistate_memory", "label": "OmniState Memory",  "unit": "%",    "icon": "mdi:memory"     },
-    { "metric": "disk",   "entity": "sensor.omnistate_disk",   "label": "OmniState Disk",    "unit": "%",    "icon": "mdi:harddisk"   },
-    { "metric": "net_rx", "entity": "sensor.omnistate_net_rx", "label": "OmniState Network", "unit": "KB/s", "icon": "mdi:network"    }
+    { "metric": "cpu",    "entity": "sensor.omnistate_cpu",    "label": "SiteRelay CPU",     "unit": "%",    "icon": "mdi:cpu-64-bit" },
+    { "metric": "memory", "entity": "sensor.omnistate_memory", "label": "SiteRelay Memory",  "unit": "%",    "icon": "mdi:memory"     },
+    { "metric": "disk",   "entity": "sensor.omnistate_disk",   "label": "SiteRelay Disk",    "unit": "%",    "icon": "mdi:harddisk"   },
+    { "metric": "net_rx", "entity": "sensor.omnistate_net_rx", "label": "SiteRelay Network", "unit": "KB/s", "icon": "mdi:network"    }
   ],
 
   "ha_switches": [

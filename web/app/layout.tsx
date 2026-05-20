@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OmniState — Your home server dashboard",
+  title: "SiteRelay — Your home server dashboard",
   description: "Real-time remote dashboard for self-hosters. Monitor Home Assistant and Linux servers from anywhere.",
 };
 
