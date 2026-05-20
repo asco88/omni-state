@@ -2,7 +2,17 @@
 
 ## What It Is
 
-OmniState is a free, open-source remote dashboard for self-hosters. It gives you a single web page — accessible from anywhere — that shows the live state of your home server, Home Assistant instance, and connected devices. No port forwarding, no VPN, no cloud subscription required for the core experience.
+OmniState is an open-source remote monitoring and control platform that works at any scale — from a single Raspberry Pi at home to a fleet of on-premises servers across multiple company sites.
+
+It gives you a single dashboard, accessible from anywhere, that shows the live state of every connected server and device. Agents run on each machine and push state outward through the cloud. No inbound ports, no VPN, no firewall changes — the attack surface is zero on the server side.
+
+### Two audiences, one product
+
+**Self-hosters and home users**
+A single web page that shows your home server, Home Assistant entities, solar data, and running services — accessible from your phone while you're away. Free, no credit card, sign in with Google.
+
+**Small and medium businesses**
+Aggregate multiple on-premises servers or branch office machines into a single pane of glass. Operations teams can monitor health, trigger automations, and control services remotely — without exposing any machine directly to the internet. The cloud acts purely as a relay; credentials and commands never leave the encrypted channel.
 
 ---
 
@@ -57,20 +67,34 @@ The user returns to OmniState. Their integration now shows as connected, with a 
 
 ## Design Principles
 
-- **Privacy first** — the server agent only pushes what you configure; no telemetry
-- **Self-hostable** — the whole stack (Next.js + Upstash) can be self-hosted; the agent is a single Python file
-- **Open contribution** — integrations are modular; the community can add new ones via PRs
-- **Free tier first** — basic real-time sync, up to X entities, forever free
+- **Zero inbound exposure** — agents push state out; nothing listens for inbound connections. No open ports, no VPN, no dynamic DNS. The security model is the same whether it's a home lab or a corporate branch office.
+- **Privacy first** — the server agent only pushes what you configure; no telemetry, no black box. Self-host the whole stack if you need data sovereignty.
+- **Scale-agnostic** — the same agent and the same dashboard work for one machine or a hundred. Multi-site aggregation is a first-class concern, not an afterthought.
+- **Open contribution** — integrations are modular; the community can add new machine types, sensors, and control surfaces via PRs.
+- **Free tier first** — basic real-time sync forever free; enterprise features (multi-user access, audit logs, SSO) on a paid tier.
 
 ---
 
 ## Roadmap (rough order)
 
-1. Public landing page with demo/screenshots
-2. Empty-state onboarding flow and integration wizard
-3. Token management UI (generate, revoke, label)
-4. Multiple integrations per user account
-5. HACS store listing (requires public repo)
-6. Custom Server integration (Python agent guide in-app)
-7. Notification rules (e.g. alert when server goes offline)
-8. Additional integrations (Proxmox, Synology, etc.)
+### Consumer / self-hoster tier
+1. ✅ Public landing page
+2. ✅ Empty-state onboarding flow and integration wizard
+3. ✅ HACS store listing (PR submitted)
+4. ✅ Custom Server integration (Python agent, guided installer)
+5. Multiple integrations per user account (HA + server simultaneously)
+6. Notification rules (offline alerts, threshold triggers)
+7. Additional integrations (Proxmox, Synology, Pi-hole, etc.)
+
+### Enterprise tier
+8. Multi-site dashboard — aggregate N servers/sites into one view with per-site status cards
+9. Team accounts — shared access, role-based permissions (viewer / operator / admin)
+10. Audit log — timestamped record of every command sent and by whom
+11. SSO / SAML — sign in with company identity provider
+12. Self-hosted deployment guide — full Docker Compose stack for air-gapped environments
+13. SLA-grade uptime and support tiers
+
+### Platform
+14. Rename / rebrand to domain-neutral name (decision pending)
+15. Plugin/SDK — documented interface for community-contributed integrations
+16. CLI — `omnistate status`, `omnistate run <action>` for scripting and CI pipelines
