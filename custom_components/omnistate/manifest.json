@@ -1,0 +1,12 @@
+{
+  "domain": "omnistate",
+  "name": "OmniState",
+  "version": "1.0.0",
+  "documentation": "https://github.com/asco88/omni-state",
+  "issue_tracker": "https://github.com/asco88/omni-state/issues",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": ["@asco88"],
+  "iot_class": "cloud_polling",
+  "config_flow": true
+}

@@ -43,9 +43,10 @@ VERCEL_URL          = _get("OMNISTATE_URL", "vercel_url").rstrip("/")
 API_KEY             = _get("OMNISTATE_API_KEY", "api_key", "")
 DATA_FILE           = Path(os.environ.get("OMNISTATE_FILE",       "sensors.json"))
 STYLE_FILE          = Path(os.environ.get("OMNISTATE_STYLE_FILE", "omni-state-style.json"))
-HEARTBEAT_INTERVAL  = 30  # seconds
-CLOUD_POLL_INTERVAL = 5   # seconds
-REQUEST_TIMEOUT     = 10  # seconds
+HEARTBEAT_INTERVAL  = 30   # seconds
+CLOUD_POLL_INTERVAL = 30   # seconds — how often to poll for desired state / commands
+STYLE_POLL_INTERVAL = 120  # seconds — style changes rarely, poll less frequently
+REQUEST_TIMEOUT     = 10   # seconds
 
 HA_URL    = _get("HA_URL",    "ha_url",    "http://homeassistant.local:8123")
 HA_TOKEN  = _get("HA_TOKEN",  "ha_token",  "")
@@ -53,18 +54,16 @@ RADIO_URL = _get("RADIO_URL", "radio_url", "http://localhost:3013")
 
 # Maps OmniState toggle IDs → HA entity IDs for direct switch control
 HA_SWITCH_ENTITIES: dict[str, str] = {
-    "ha_entry":   "input_boolean.entry_light",
-    "ha_front":   "switch.right_switch_2",
-    "ha_left":    "switch.wifi_smart_switch_switch_2",
-    "ha_parking": "switch.wifi_smart_switch_switch_3",
+    s["id"]: s["entity"]
+    for s in _cfg.get("ha_switches", [])
+    if s.get("entity")
 }
 
 # Maps OmniState action IDs → HA automation/script entity IDs
 HA_ACTION_ENTITIES: dict[str, str] = {
-    "all_lights_off":  "automation.turn_all_light_off",
-    "entry_light_on":  "automation.solar_based_turn_on_lights",
-    "front_lights_on": "automation.turn_front_lights_on",
-    "front_light_off": "automation.turn_front_light_off",
+    a["id"]: a["entity"]
+    for a in _cfg.get("ha_actions", [])
+    if a.get("entity")
 }
 
 ACTION_TRIGGER_WINDOW_MS = 60_000  # ignore triggers older than 60 s (prevents re-fire on restart)
@@ -308,7 +307,7 @@ def style_sync_loop() -> None:
             if rev and rev != last_rev and style is not None:
                 apply_desired_style(STYLE_FILE, style)
                 last_rev = rev
-        time.sleep(CLOUD_POLL_INTERVAL)
+        time.sleep(STYLE_POLL_INTERVAL)
 
 # ── File watcher ──────────────────────────────────────────────────────────────
 

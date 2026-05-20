@@ -1,0 +1,5 @@
+DOMAIN = "omnistate"
+CONF_URL = "url"
+CONF_TOKEN = "token"
+SCAN_INTERVAL = 30
+OFFLINE_THRESHOLD_MS = 90_000

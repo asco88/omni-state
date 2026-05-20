@@ -30,8 +30,8 @@ def _get(env_key: str, cfg_key: str, default: str = "") -> str:
     return os.environ.get(env_key) or _cfg.get(cfg_key, default)
 
 SENSORS_FILE = Path(os.environ.get("OMNISTATE_FILE", "sensors.json"))
-NET_IFACE    = os.environ.get("OMNISTATE_NET_IFACE", "ens18")
-INTERVAL     = 5
+NET_IFACE    = os.environ.get("OMNISTATE_NET_IFACE") or _cfg.get("net_iface", "eth0")
+INTERVAL     = 15
 
 HA_URL    = _get("HA_URL",    "ha_url",    "http://homeassistant.local:8123")
 HA_TOKEN  = _get("HA_TOKEN",  "ha_token",  "")
@@ -44,48 +44,38 @@ logging.basicConfig(
 )
 log = logging.getLogger("real-sensors")
 
-WATCHED_SERVICES = [
-    ("nginx",            "nginx"),
-    ("docker",           "Docker"),
-    ("gitlab_runner",    "GitLab Runner"),
-    ("oref_monitor",     "OREF Monitor"),
-    ("lang_learn",       "LangLearn"),
-    ("home_data_share",  "HomeShare"),
-    ("server_dashboard", "Server Dashboard"),
-    ("omnistate",        "OmniState Agent"),
+WATCHED_SERVICES: list[tuple[str, str]] = [
+    (s["id"], s["label"]) for s in _cfg.get("services", [])
 ]
 
 # HA sensor entities → pulled into OmniState sensors section
 # (omnistate_id, ha_entity_id, label, unit, min, max)
-HA_SENSOR_MAP = [
-    ("ha_solar_power",   "sensor.solaredge_current_power", "Solar Power",   "kW", 0, 12),
-    ("ha_solar_battery", "sensor.solaredge_storage_level", "Solar Battery", "%",  0, 100),
+HA_SENSOR_MAP: list[tuple] = [
+    (s["id"], s["entity"], s["label"], s["unit"], s.get("min", 0), s.get("max", 100))
+    for s in _cfg.get("ha_sensors", [])
 ]
 
-# Ubuntu metrics to push back into HA as virtual sensor entities
+# Server metrics to push back into HA as virtual sensor entities
 # (omnistate_sensor_id, ha_entity_id, ha_friendly_name, unit, icon)
-HA_PUSH_MAP = [
-    ("cpu",    "sensor.omnistate_cpu",    "OmniState CPU",     "%",    "mdi:cpu-64-bit"),
-    ("memory", "sensor.omnistate_memory", "OmniState Memory",  "%",    "mdi:memory"),
-    ("disk",   "sensor.omnistate_disk",   "OmniState Disk",    "%",    "mdi:harddisk"),
-    ("net_rx", "sensor.omnistate_net_rx", "OmniState Network", "KB/s", "mdi:network"),
+HA_PUSH_MAP: list[tuple] = [
+    (p["metric"], p["entity"], p["label"], p["unit"], p.get("icon", "mdi:monitor"))
+    for p in _cfg.get("ha_push", [])
 ]
 
-HA_ACTIONS = [
-    {"id": "all_lights_off",  "label": "All Lights OFF"},
-    {"id": "entry_light_on",  "label": "Entry Light ON"},
-    {"id": "front_lights_on", "label": "Front Lights ON"},
-    {"id": "front_light_off", "label": "Front Light OFF"},
+HA_ACTIONS: list[dict] = [
+    {"id": a["id"], "label": a["label"]}
+    for a in _cfg.get("ha_actions", [])
 ]
 
 INITIAL_STATE: dict = {
     "sensors": [
-        {"id": "cpu",             "label": "CPU Usage",    "value": 0.0, "unit": "%",    "min": 0, "max": 100},
-        {"id": "memory",          "label": "Memory",       "value": 0.0, "unit": "%",    "min": 0, "max": 100},
-        {"id": "disk",            "label": "Disk /",       "value": 0.0, "unit": "%",    "min": 0, "max": 100},
-        {"id": "net_rx",          "label": "Network RX",   "value": 0.0, "unit": "KB/s", "min": 0, "max": 5000},
-        {"id": "ha_solar_power",  "label": "Solar Power",  "value": 0.0, "unit": "kW",   "min": 0, "max": 12},
-        {"id": "ha_solar_battery","label": "Solar Battery","value": 0.0, "unit": "%",    "min": 0, "max": 100},
+        {"id": "cpu",    "label": "CPU Usage",  "value": 0.0, "unit": "%",    "min": 0, "max": 100},
+        {"id": "memory", "label": "Memory",      "value": 0.0, "unit": "%",    "min": 0, "max": 100},
+        {"id": "disk",   "label": "Disk /",      "value": 0.0, "unit": "%",    "min": 0, "max": 100},
+        {"id": "net_rx", "label": "Network RX",  "value": 0.0, "unit": "KB/s", "min": 0, "max": 5000},
+    ] + [
+        {"id": s["id"], "label": s["label"], "value": 0.0, "unit": s["unit"], "min": s.get("min", 0), "max": s.get("max", 100)}
+        for s in _cfg.get("ha_sensors", [])
     ],
     "toggles": [],
     "sliders": [],
@@ -296,7 +286,17 @@ def update_ha_sensors(state: dict, ha: HaClient) -> dict:
 
 
 def push_to_ha(state: dict, ha: HaClient) -> None:
-    """Push Ubuntu server metrics to HA as virtual sensor entities."""
+    """Push server metrics and connection status to HA as virtual sensor entities."""
+    import datetime
+
+    # Always push connection status so HA can detect when the agent goes offline
+    ha.push_sensor("sensor.omnistate_status", "online", {
+        "friendly_name": "OmniState Status",
+        "icon": "mdi:home-assistant",
+        "last_seen": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "source": "omnistate",
+    })
+
     vals = {s["id"]: s["value"] for s in state.get("sensors", [])}
     for sid, eid, name, unit, icon in HA_PUSH_MAP:
         if sid in vals:

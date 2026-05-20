@@ -1,6 +1,55 @@
 {
+  "_docs": "Copy this file to config.json and fill in your values. All keys are optional except vercel_url and api_key.",
+
   "vercel_url": "https://your-project.vercel.app",
   "api_key":    "GENERATE_WITH_SETUP_SH",
-  "ha_url":     "http://homeassistant.local:8123",
-  "ha_token":   "YOUR_LONG_LIVED_ACCESS_TOKEN"
+
+  "ha_url":   "http://homeassistant.local:8123",
+  "ha_token": "YOUR_LONG_LIVED_ACCESS_TOKEN",
+
+  "radio_url": "http://localhost:3013",
+
+  "net_iface": "eth0",
+
+  "services": [
+    { "id": "nginx",     "label": "Nginx"  },
+    { "id": "docker",    "label": "Docker" },
+    { "id": "omnistate", "label": "OmniState Agent" }
+  ],
+
+  "ha_sensors": [
+    {
+      "id":     "ha_solar_power",
+      "entity": "sensor.YOUR_SOLAR_POWER_ENTITY",
+      "label":  "Solar Power",
+      "unit":   "kW",
+      "min":    0,
+      "max":    12
+    },
+    {
+      "id":     "ha_solar_battery",
+      "entity": "sensor.YOUR_SOLAR_BATTERY_ENTITY",
+      "label":  "Solar Battery",
+      "unit":   "%",
+      "min":    0,
+      "max":    100
+    }
+  ],
+
+  "ha_push": [
+    { "metric": "cpu",    "entity": "sensor.omnistate_cpu",    "label": "OmniState CPU",     "unit": "%",    "icon": "mdi:cpu-64-bit" },
+    { "metric": "memory", "entity": "sensor.omnistate_memory", "label": "OmniState Memory",  "unit": "%",    "icon": "mdi:memory"     },
+    { "metric": "disk",   "entity": "sensor.omnistate_disk",   "label": "OmniState Disk",    "unit": "%",    "icon": "mdi:harddisk"   },
+    { "metric": "net_rx", "entity": "sensor.omnistate_net_rx", "label": "OmniState Network", "unit": "KB/s", "icon": "mdi:network"    }
+  ],
+
+  "ha_switches": [
+    { "id": "switch_1", "label": "Garden Lights",  "entity": "switch.YOUR_SWITCH_ENTITY"         },
+    { "id": "switch_2", "label": "Entry Light",    "entity": "input_boolean.YOUR_BOOLEAN_ENTITY"  }
+  ],
+
+  "ha_actions": [
+    { "id": "all_lights_off", "label": "All Lights OFF", "entity": "automation.YOUR_AUTOMATION_ENTITY" },
+    { "id": "goodnight",      "label": "Goodnight",      "entity": "script.YOUR_SCRIPT_ENTITY"         }
+  ]
 }

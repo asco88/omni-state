@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to OmniState",
+        "description": "Enter your OmniState dashboard URL and agent API token. Find the token in the dashboard under Settings → Token.",
+        "data": {
+          "url": "Dashboard URL",
+          "token": "API Token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot reach the OmniState dashboard. Check the URL.",
+      "invalid_auth": "Invalid API token. Regenerate it from the dashboard Settings.",
+      "unknown": "Unexpected error. Check HA logs."
+    },
+    "abort": {
+      "already_configured": "This OmniState instance is already configured."
+    }
+  }
+}

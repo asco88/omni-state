@@ -29,8 +29,11 @@ default_vercel=$(read_cfg vercel_url)
 default_ha_url=$(read_cfg ha_url)
 default_ha_token=$(read_cfg ha_token)
 default_api_key=$(read_cfg api_key)
+default_net_iface=$(read_cfg net_iface)
 
-[ -z "$default_ha_url" ] && default_ha_url="http://homeassistant.local:8123"
+[ -z "$default_ha_url" ]    && default_ha_url="http://homeassistant.local:8123"
+[ -z "$default_net_iface" ] && default_net_iface=$(ip route 2>/dev/null | awk '/^default/{print $5; exit}')
+[ -z "$default_net_iface" ] && default_net_iface="eth0"
 
 # ── 2. Prompt for values ──────────────────────────────────────────────────────
 
@@ -59,6 +62,13 @@ else
 fi
 
 echo ""
+say "Step 3b/5 — Network interface for bandwidth monitoring"
+echo "  The network interface used to measure RX/TX speed (e.g. eth0, ens18, enp3s0)."
+echo "  Run 'ip link' or 'ifconfig' to see available interfaces."
+read -rp "  Network interface [$default_net_iface]: " net_iface
+net_iface="${net_iface:-$default_net_iface}"
+
+echo ""
 say "Step 4/5 — API Key"
 if [ -n "$default_api_key" ]; then
   echo "  An API key already exists. Press Enter to keep it, or type a new one."
@@ -77,13 +87,23 @@ say "Step 5/5 — Writing config and installing services"
 
 python3 - <<PYEOF
 import json, pathlib
-cfg = {
+
+cfg_path = pathlib.Path("$CONFIG")
+existing = {}
+if cfg_path.exists():
+    try:
+        existing = json.loads(cfg_path.read_text())
+    except Exception:
+        pass
+
+existing.update({
     "vercel_url": "$vercel_url",
     "api_key":    "$api_key",
     "ha_url":     "$ha_url",
     "ha_token":   "$ha_token",
-}
-pathlib.Path("$CONFIG").write_text(json.dumps(cfg, indent=2) + "\n")
+    "net_iface":  "$net_iface",
+})
+cfg_path.write_text(json.dumps(existing, indent=2) + "\n")
 print("  config.json written")
 PYEOF
 
@@ -163,5 +183,8 @@ echo ""
 echo "  Check logs:"
 echo "    journalctl -u omnistate -f"
 echo "    journalctl -u real-sensors -f"
+echo ""
+warn "To add services, HA sensors, switches, and actions:"
+echo "  Edit config.json — see config.json.example for all options."
 echo "═══════════════════════════════════════════════════"
 echo ""

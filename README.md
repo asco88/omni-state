@@ -1,104 +1,117 @@
 # OmniState
 
-Stateful relay — sync local app state to a cloud dashboard without port forwarding.
+Real-time remote dashboard for self-hosters. Monitor your Home Assistant instance and Linux servers from anywhere — no VPN, no port forwarding, no cloud subscription required for the core experience.
+
+**[→ omni-state.vercel.app](https://omni-state.vercel.app)**
+
+---
+
+## What you get
+
+- Live sensor data (CPU, memory, disk, network, solar, custom metrics)
+- Home Assistant entities surfaced as native HA sensors, switches, and buttons
+- Service status monitoring with systemd integration
+- One-click automations and toggles synced bidirectionally with HA
+- Customizable layout: dark/light themes, drag-to-reorder, per-section column control
+- Works from any browser — phone, tablet, desktop
+
+## Getting started
+
+### Hosted (easiest)
+
+1. Go to **[omni-state.vercel.app](https://omni-state.vercel.app)** and sign in with Google
+2. Click **Add integration → Home Assistant**
+3. Install the OmniState integration via HACS (or manually)
+4. Generate a token in the wizard and paste it into HA
+5. Your dashboard populates automatically
+
+### Home Assistant integration — HACS
+
+1. Open HACS → ⋮ → Custom repositories
+2. Add `https://github.com/asco88/omni-state` — category: **Integration**
+3. Search for **OmniState** and click Download
+4. Restart Home Assistant
+5. Settings → Integrations → Add → OmniState → enter your dashboard URL and token
+
+### Home Assistant integration — Manual
+
+Copy `custom_components/omnistate/` into your HA config directory:
+
+```bash
+cp -r custom_components/omnistate/ /config/custom_components/
+```
+
+Restart HA and add the integration as above.
+
+### Linux server agent
+
+Run the guided installer on your Ubuntu/Debian server:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/asco88/omni-state/main/setup.sh | bash
+```
+
+Or manually:
+
+```bash
+git clone https://github.com/asco88/omni-state
+cd omni-state
+cp config.json.example config.json
+# edit config.json with your settings
+python3 agent.py
+```
+
+See [`config.json.example`](config.json.example) for all available options.
+
+---
+
+## Architecture
 
 ```
-[Ubuntu server]  →  POST /api/update-state  →  [Vercel + Upstash KV]  →  [Browser dashboard]
+[Home Assistant]  ──HA integration──▶ ┐
+                                       ├─ Vercel API ─▶ Upstash KV ─▶ Dashboard
+[Linux server]    ──Python agent────▶ ┘
 ```
+
+- The HA integration and Python agent both authenticate with a Bearer token
+- State is stored in Upstash KV, namespaced per user email
+- The dashboard polls every 5 seconds; agents push every 15–30 seconds
+- No inbound ports or dynamic DNS required on the home server
+
+## Self-hosting
+
+The full stack is a Next.js app (Vercel) + Upstash KV. To self-host:
+
+1. Fork the repo and deploy `web/` to Vercel
+2. Add an Upstash KV store in the Vercel dashboard
+3. Set `NEXTAUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` in Vercel env vars
+4. Update `vercel_url` in `config.json` on your server to point to your deployment
 
 ## Project layout
 
 ```
 omni-state/
-├── web/          # Next.js app (deploy to Vercel)
-├── agent.py      # Python watcher (run on home server)
-├── data.json     # File the agent watches
-└── README.md
+├── web/                        # Next.js app
+│   ├── app/                    # Pages and API routes
+│   └── lib/                    # Shared utilities (KV keys, auth)
+├── custom_components/omnistate/ # Home Assistant integration
+├── agent.py                    # Cloud sync agent (Linux server)
+├── real_sensors.py             # Hardware sensor collector
+├── setup.sh                    # Guided installer
+└── config.json.example         # Annotated config template
 ```
 
----
+## Contributing
 
-## Part 1 — Deploy the cloud UI to Vercel
+PRs welcome. The most impactful areas:
 
-### Prerequisites
+- New integrations (Proxmox, Synology NAS, Pi-hole, etc.)
+- Additional HA entity types (climate, covers, alarm panels)
+- Dashboard widgets and visualizations
+- Notification rules (offline alerts, threshold triggers)
 
-- Node 18+
-- [Vercel CLI](https://vercel.com/docs/cli): `npm i -g vercel`
+Open an issue first for anything substantial so we can align on approach.
 
-### Steps
+## License
 
-```bash
-cd web
-vercel link          # link to your Vercel project
-vercel env pull .env.local   # pull KV credentials
-npm install
-npm run dev          # preview locally at http://localhost:3000
-vercel --prod        # deploy to production
-```
-
-The Upstash KV store is provisioned automatically via the Vercel integration.  
-If it's missing, run: `vercel integration add upstash-kv`
-
----
-
-## Part 2 — Run the Python agent on the home server
-
-### Prerequisites
-
-```bash
-pip install watchdog requests
-```
-
-### Run
-
-```bash
-export OMNISTATE_URL=https://<your-vercel-deployment>.vercel.app
-python agent.py
-```
-
-Optional — change the watched file:
-
-```bash
-export OMNISTATE_FILE=/path/to/your/data.json
-```
-
-### Run as a systemd service (Ubuntu)
-
-Create `/etc/systemd/system/omnistate.service`:
-
-```ini
-[Unit]
-Description=OmniState Agent
-After=network.target
-
-[Service]
-User=ubuntu
-WorkingDirectory=/home/ubuntu/omni-state
-Environment="OMNISTATE_URL=https://<your-vercel-deployment>.vercel.app"
-ExecStart=/usr/bin/python3 /home/ubuntu/omni-state/agent.py
-Restart=on-failure
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable omnistate
-sudo systemctl start omnistate
-sudo journalctl -u omnistate -f   # follow logs
-```
-
----
-
-## How it works
-
-| Component | Behaviour |
-|-----------|-----------|
-| `agent.py` | Watches `data.json` with `watchdog`. On change, POSTs JSON to `/api/update-state`. Every 30 s sends `{"type":"heartbeat"}` to the same endpoint. |
-| `/api/update-state` | Writes payload + timestamp to Upstash KV. Heartbeats update `server_last_seen`. |
-| `/api/get-state` | Returns current state + timestamps. Server is "Offline" if last heartbeat > 60 s ago. |
-| Dashboard | Polls `/api/get-state` every 5 s, shows state, last-updated time, and server online/offline indicator. |
-
-No inbound ports are required on the home server.
+MIT

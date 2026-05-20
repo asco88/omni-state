@@ -1,14 +1,14 @@
 import { kv } from "@vercel/kv";
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { resolveEmail } from "@/lib/auth-any";
 import { userKeys } from "@/lib/kv-user";
 
 const OFFLINE_THRESHOLD_MS = 60_000;
 
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const keys = userKeys(session.user.email);
+export async function GET(req: NextRequest) {
+  const result = await resolveEmail(req);
+  if (result instanceof NextResponse) return result;
+  const keys = userKeys(result);
 
   const [stateData, stateUpdatedAt, serverLastSeen, desiredStateRev] =
     await Promise.all([
