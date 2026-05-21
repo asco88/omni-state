@@ -50,13 +50,13 @@ function Nav() {
         >
           GitHub
         </a>
-        <SignInButton />
+        <SignInButton label="Sign In" />
       </div>
     </header>
   );
 }
 
-function SignInButton() {
+function SignInButton({ label = "Get Started Free" }: { label?: string }) {
   return (
     <form
       action={async () => {
@@ -69,7 +69,7 @@ function SignInButton() {
         className="text-sm px-4 py-2 rounded-lg font-medium transition-opacity hover:opacity-90"
         style={{ backgroundColor: "#3b82f6", color: "#fff" }}
       >
-        Get Started Free
+        {label}
       </button>
     </form>
   );
