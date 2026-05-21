@@ -45,7 +45,7 @@ function Nav() {
           href="https://github.com/asco88/siterelay"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm transition-colors"
+          className="hidden sm:block text-sm transition-colors"
           style={{ color: "#64748b" }}
         >
           GitHub
@@ -79,9 +79,9 @@ function SignInButton() {
 
 function Hero() {
   return (
-    <section className="flex flex-col items-center text-center px-6 pt-24 pb-20 gap-8 max-w-3xl mx-auto w-full">
+    <section className="flex flex-col items-center text-center px-6 pt-14 sm:pt-24 pb-20 gap-8 max-w-3xl mx-auto w-full">
       <div className="flex flex-col gap-4">
-        <h1 className="text-5xl font-bold tracking-tight leading-tight">
+        <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-tight">
           Your home server,{" "}
           <span style={{ color: "#3b82f6" }}>visible from anywhere</span>
         </h1>
