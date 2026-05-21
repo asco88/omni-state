@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { signIn } from "@/auth";
 
@@ -10,11 +9,10 @@ export const metadata = {
 
 export default async function LandingPage() {
   const session = await auth();
-  if (session) redirect("/dashboard");
 
   return (
     <main className="min-h-screen flex flex-col" style={{ backgroundColor: "#0f172a", color: "#f1f5f9" }}>
-      <Nav />
+      <Nav user={session?.user ?? null} />
       <Hero />
       <Features />
       <HowItWorks />
@@ -25,7 +23,7 @@ export default async function LandingPage() {
 
 // ── Nav ──────────────────────────────────────────────────────────────────────
 
-function Nav() {
+function Nav({ user }: { user: { name?: string | null; email?: string | null; image?: string | null } | null }) {
   return (
     <header
       className="flex items-center justify-between px-6 py-4 border-b"
@@ -50,7 +48,22 @@ function Nav() {
         >
           GitHub
         </a>
-        <SignInButton label="Sign In" />
+        {user ? (
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:block text-sm" style={{ color: "#64748b" }}>
+              {user.name ?? user.email}
+            </span>
+            <a
+              href="/dashboard"
+              className="text-sm px-4 py-2 rounded-lg font-medium transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "#3b82f6", color: "#fff" }}
+            >
+              Dashboard →
+            </a>
+          </div>
+        ) : (
+          <SignInButton label="Sign In" />
+        )}
       </div>
     </header>
   );
