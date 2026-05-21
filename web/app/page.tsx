@@ -31,7 +31,7 @@ function Nav({ user }: { user: { name?: string | null; email?: string | null; im
       style={{ borderColor: "#1e293b" }}
     >
       <div className="flex items-center gap-2">
-        <Image src="/logo.png" alt="SiteRelay" width={120} height={66} priority />
+        <Image src="/logo.png" alt="SiteRelay" width={160} height={87} priority />
         <span
           className="text-xs px-2 py-0.5 rounded-full font-medium"
           style={{ backgroundColor: "#1e293b", color: "#64748b" }}
