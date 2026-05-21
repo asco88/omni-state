@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { auth } from "@/auth";
 import { signIn } from "@/auth";
 
@@ -30,7 +31,7 @@ function Nav({ user }: { user: { name?: string | null; email?: string | null; im
       style={{ borderColor: "#1e293b" }}
     >
       <div className="flex items-center gap-2">
-        <span className="text-xl font-bold tracking-tight">SiteRelay</span>
+        <Image src="/logo.png" alt="SiteRelay" width={120} height={66} priority />
         <span
           className="text-xs px-2 py-0.5 rounded-full font-medium"
           style={{ backgroundColor: "#1e293b", color: "#64748b" }}
