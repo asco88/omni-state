@@ -20,6 +20,18 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Settings2, Plug, Key, LogOut, Pencil, Check } from "lucide-react";
+
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -244,14 +256,14 @@ function SortableSection({ id, title, editMode, onHide, children }: {
         </h2>
         {editMode && (
           <div className="flex items-center gap-1">
-            <button
+            <Button
               onClick={onHide}
-              className="px-2 py-1 rounded text-xs transition-opacity opacity-60 hover:opacity-100"
-              style={{ color: "var(--text-2)", backgroundColor: "var(--bg-input)" }}
+              variant="ghost"
+              size="xs"
               title="Hide section"
             >
               Hide
-            </button>
+            </Button>
             <button
               {...attributes} {...listeners}
               className="p-1.5 rounded cursor-grab active:cursor-grabbing transition-opacity opacity-40 hover:opacity-100"
@@ -280,21 +292,21 @@ function PlainSection({ id, title, editMode, onHide, columnSide, onMoveColumn, c
         <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>{title}</h2>
         {editMode && (
           <div className="flex items-center gap-1">
-            <button
+            <Button
               onClick={onMoveColumn}
-              className="px-2 py-1 rounded text-xs transition-opacity opacity-60 hover:opacity-100"
-              style={{ color: "var(--text-2)", backgroundColor: "var(--bg-input)" }}
+              variant="ghost"
+              size="xs"
               title={columnSide === "left" ? "Move to right column" : "Move to left column"}
             >
               {columnSide === "left" ? "→" : "←"}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={onHide}
-              className="px-2 py-1 rounded text-xs transition-opacity opacity-60 hover:opacity-100"
-              style={{ color: "var(--text-2)", backgroundColor: "var(--bg-input)" }}
+              variant="ghost"
+              size="xs"
             >
               Hide
-            </button>
+            </Button>
             <button
               {...attributes} {...listeners}
               className="p-1.5 rounded cursor-grab active:cursor-grabbing transition-opacity opacity-40 hover:opacity-100"
@@ -317,23 +329,23 @@ function SensorCard({ sensor, dragHandleProps, editMode }: { sensor: Sensor; dra
   const ratio = (sensor.value - sensor.min) / (sensor.max - sensor.min);
   const color = valueColor(ratio);
   return (
-    <div
-      className={`rounded-xl p-4 flex flex-col gap-3 border select-none ${editMode ? "cursor-grab active:cursor-grabbing" : ""}`}
-      style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}
-      {...dragHandleProps}
+    <Card
+      className={`select-none border-0 ${editMode ? "cursor-grab active:cursor-grabbing" : ""}`}
+      style={{ backgroundColor: "var(--bg-card)" }}
+      {...(dragHandleProps as React.HTMLAttributes<HTMLDivElement>)}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-sm" style={{ color: "var(--text-2)" }}>{sensor.label}</span>
-        <span className="text-lg">{SENSOR_ICONS[sensor.id] ?? "📊"}</span>
-      </div>
-      <div className="text-3xl font-bold tabular-nums" style={{ color }}>
-        {sensor.value}
-        <span className="text-base font-normal ml-1" style={{ color: "var(--text-3)" }}>{sensor.unit}</span>
-      </div>
-      <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-input)" }}>
-        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.round(ratio * 100)}%`, backgroundColor: color }} />
-      </div>
-    </div>
+      <CardContent className="flex flex-col gap-3 pt-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm" style={{ color: "var(--text-2)" }}>{sensor.label}</span>
+          <span className="text-lg">{SENSOR_ICONS[sensor.id] ?? "📊"}</span>
+        </div>
+        <div className="text-3xl font-bold tabular-nums" style={{ color }}>
+          {sensor.value}
+          <span className="text-base font-normal ml-1" style={{ color: "var(--text-3)" }}>{sensor.unit}</span>
+        </div>
+        <Progress value={Math.round(ratio * 100)} className="h-1.5" />
+      </CardContent>
+    </Card>
   );
 }
 
@@ -341,98 +353,95 @@ function ToggleSwitch({
   toggle, onToggle, dragHandleProps, editMode,
 }: { toggle: Toggle; onToggle: (id: string) => void; dragHandleProps: Record<string, unknown>; editMode: boolean }) {
   return (
-    <div className="rounded-xl p-4 flex items-center justify-between border" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
-      <div className="flex items-center gap-2 min-w-0">
-        {editMode && (
-          <span
-            className="cursor-grab active:cursor-grabbing flex-shrink-0 opacity-40 hover:opacity-100 transition-opacity"
-            style={{ color: "var(--text-2)" }}
-            {...dragHandleProps}
-          >
-            <GripIcon />
-          </span>
-        )}
-        <span className="text-sm font-medium truncate" style={{ color: "var(--text-1)" }}>{toggle.label}</span>
-      </div>
-      <button onClick={() => onToggle(toggle.id)} className="flex-shrink-0 ml-2">
-        <div
-          className="relative w-11 h-6 rounded-full transition-colors duration-200"
-          style={{ backgroundColor: toggle.enabled ? "var(--accent)" : "var(--bg-input)" }}
-        >
-          <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${toggle.enabled ? "translate-x-5" : "translate-x-0"}`} />
+    <Card className="border-0" style={{ backgroundColor: "var(--bg-card)" }}>
+      <CardContent className="flex items-center justify-between pt-4">
+        <div className="flex items-center gap-2 min-w-0">
+          {editMode && (
+            <span
+              className="cursor-grab active:cursor-grabbing flex-shrink-0 opacity-40 hover:opacity-100 transition-opacity"
+              style={{ color: "var(--text-2)" }}
+              {...(dragHandleProps as React.HTMLAttributes<HTMLSpanElement>)}
+            >
+              <GripIcon />
+            </span>
+          )}
+          <span className="text-sm font-medium truncate" style={{ color: "var(--text-1)" }}>{toggle.label}</span>
         </div>
-      </button>
-    </div>
+        <Switch
+          checked={toggle.enabled}
+          onCheckedChange={() => onToggle(toggle.id)}
+          className="flex-shrink-0 ml-2"
+        />
+      </CardContent>
+    </Card>
   );
 }
 
 function VolumeSlider({ slider, onCommit }: { slider: Slider; onCommit: (id: string, v: number) => void }) {
-  const [localVal, setLocalVal] = useState(slider.value);
+  const [displayVal, setDisplay] = useState(slider.value);
   const isDragging = useRef(false);
 
   useEffect(() => {
-    if (!isDragging.current) setLocalVal(slider.value);
+    if (!isDragging.current) setDisplay(slider.value);
   }, [slider.value]);
 
-  const ratio = (localVal - slider.min) / (slider.max - slider.min);
+  const ratio = (displayVal - slider.min) / (slider.max - slider.min);
   const color = valueColor(ratio);
 
   return (
-    <div className="rounded-xl p-4 col-span-2 flex flex-col gap-3 border" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">🔊</span>
-          <span className="text-sm font-medium" style={{ color: "var(--text-1)" }}>{slider.label}</span>
+    <Card className="col-span-2 border-0" style={{ backgroundColor: "var(--bg-card)" }}>
+      <CardContent className="flex flex-col gap-3 pt-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🔊</span>
+            <span className="text-sm font-medium" style={{ color: "var(--text-1)" }}>{slider.label}</span>
+          </div>
+          <span className="text-2xl font-bold tabular-nums" style={{ color }}>
+            {displayVal}<span className="text-sm font-normal ml-1" style={{ color: "var(--text-3)" }}>{slider.unit}</span>
+          </span>
         </div>
-        <span className="text-2xl font-bold tabular-nums" style={{ color }}>
-          {localVal}<span className="text-sm font-normal ml-1" style={{ color: "var(--text-3)" }}>{slider.unit}</span>
-        </span>
-      </div>
-      <div className="relative w-full" style={{ height: 20 }}>
-        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-3 rounded-full pointer-events-none" style={{ backgroundColor: "var(--bg-input)" }}>
-          <div className="h-full rounded-full" style={{ width: `${ratio * 100}%`, backgroundColor: color }} />
-          <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-md" style={{ left: `calc(${ratio * 100}% - 8px)` }} />
-        </div>
-        <input
-          type="range" min={slider.min} max={slider.max} value={localVal}
-          className="absolute inset-0 w-full opacity-0 cursor-pointer"
-          onPointerDown={() => { isDragging.current = true; }}
-          onChange={(e) => setLocalVal(Number(e.target.value))}
-          onPointerUp={(e) => { isDragging.current = false; onCommit(slider.id, Number((e.target as HTMLInputElement).value)); }}
+        <Slider
+          value={[displayVal]}
+          min={slider.min}
+          max={slider.max}
+          onValueChange={(val) => { isDragging.current = true; setDisplay(Array.isArray(val) ? (val as number[])[0] : (val as number)); }}
+          onValueCommitted={(val) => { isDragging.current = false; onCommit(slider.id, Array.isArray(val) ? (val as number[])[0] : (val as number)); }}
         />
-      </div>
-      <div className="flex justify-between text-xs" style={{ color: "var(--text-3)" }}>
-        <span>{slider.min}</span><span>{Math.round((slider.max - slider.min) / 2)}</span><span>{slider.max}</span>
-      </div>
-    </div>
+        <div className="flex justify-between text-xs" style={{ color: "var(--text-3)" }}>
+          <span>{slider.min}</span><span>{Math.round((slider.max - slider.min) / 2)}</span><span>{slider.max}</span>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
 function FileCard({ group }: { group: FileGroup }) {
   return (
-    <div className="rounded-xl p-4 col-span-2 flex flex-col gap-3 border" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">📁</span>
-          <span className="text-sm font-medium" style={{ color: "var(--text-1)" }}>{group.label}</span>
+    <Card className="col-span-2 border-0" style={{ backgroundColor: "var(--bg-card)" }}>
+      <CardContent className="flex flex-col gap-3 pt-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">📁</span>
+            <span className="text-sm font-medium" style={{ color: "var(--text-1)" }}>{group.label}</span>
+          </div>
+          <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: "var(--text-3)", backgroundColor: "var(--bg-input)" }}>
+            {group.items.length} files · read-only
+          </span>
         </div>
-        <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: "var(--text-3)", backgroundColor: "var(--bg-input)" }}>
-          {group.items.length} files · read-only
-        </span>
-      </div>
-      {group.items.length === 0 ? (
-        <p className="text-xs italic" style={{ color: "var(--text-3)" }}>No files found</p>
-      ) : (
-        <div className="max-h-48 overflow-y-auto" style={{ borderColor: "var(--border)" }}>
-          {group.items.map((f) => (
-            <div key={f.name} className="flex items-center justify-between py-1.5 border-b last:border-0" style={{ borderColor: "var(--border)" }}>
-              <span className="text-xs font-mono truncate mr-4" style={{ color: "var(--text-2)" }}>{f.name}</span>
-              <span className="text-xs shrink-0 tabular-nums" style={{ color: "var(--text-3)" }}>{formatSize(f.size)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+        {group.items.length === 0 ? (
+          <p className="text-xs italic" style={{ color: "var(--text-3)" }}>No files found</p>
+        ) : (
+          <ScrollArea className="max-h-48">
+            {group.items.map((f) => (
+              <div key={f.name} className="flex items-center justify-between py-1.5 border-b last:border-0" style={{ borderColor: "var(--border)" }}>
+                <span className="text-xs font-mono truncate mr-4" style={{ color: "var(--text-2)" }}>{f.name}</span>
+                <span className="text-xs shrink-0 tabular-nums" style={{ color: "var(--text-3)" }}>{formatSize(f.size)}</span>
+              </div>
+            ))}
+          </ScrollArea>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -444,17 +453,19 @@ function ActionButton({ action, onTrigger }: { action: Action; onTrigger: (id: s
     setTimeout(() => setFired(false), 2000);
   }
   return (
-    <button
+    <Button
       onClick={handleClick}
-      className="rounded-xl p-4 flex items-center gap-3 border transition-all duration-150 active:scale-95 text-left w-full"
+      variant="outline"
+      className="h-auto rounded-xl p-4 flex items-center gap-3 transition-all duration-150 active:scale-95 text-left w-full justify-start"
       style={{
         backgroundColor: fired ? "var(--accent)" : "var(--bg-card)",
         borderColor: fired ? "var(--accent)" : "var(--border)",
+        color: fired ? "#fff" : "var(--text-1)",
       }}
     >
       <span className="text-lg flex-shrink-0">{fired ? "✅" : "▶️"}</span>
       <div className="min-w-0">
-        <div className="text-sm font-medium truncate" style={{ color: fired ? "#fff" : "var(--text-1)" }}>
+        <div className="text-sm font-medium truncate">
           {fired ? "Triggered!" : action.label}
         </div>
         {action.last_triggered && !fired && (
@@ -463,7 +474,7 @@ function ActionButton({ action, onTrigger }: { action: Action; onTrigger: (id: s
           </div>
         )}
       </div>
-    </button>
+    </Button>
   );
 }
 
@@ -503,10 +514,13 @@ function DeviceRow({
           </div>
         </button>
       ) : (
-        <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0 tabular-nums"
-          style={{ backgroundColor: on ? "rgba(34,197,94,0.12)" : "var(--bg-input)", color: on ? "#22c55e" : "var(--text-3)" }}>
+        <Badge
+          variant={on ? "default" : "outline"}
+          className="flex-shrink-0 tabular-nums"
+          style={on ? { backgroundColor: "rgba(34,197,94,0.12)", color: "#22c55e", border: "none" } : { color: "var(--text-3)" }}
+        >
           {group === "sensors" ? `${dev.state}${dev.unit ? ` ${dev.unit}` : ""}` : dev.state}
-        </span>
+        </Badge>
       )}
 
       {onTogglePin && (
@@ -538,11 +552,14 @@ function HaDeviceBrowser({
         <div key={group} className="rounded-xl border overflow-hidden" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
           <div className="px-4 py-2 border-b flex items-center gap-2" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-input)" }}>
             <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>{HA_DOMAIN_LABELS[group]}</span>
-            <span className="ml-auto text-xs px-1.5 py-0.5 rounded-full" style={{ color: "var(--text-3)", backgroundColor: "var(--border)" }}>{devices[group].length}</span>
+            <Badge variant="outline" className="ml-auto text-xs" style={{ color: "var(--text-3)" }}>{devices[group].length}</Badge>
           </div>
-          <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-            {devices[group].map((dev) => (
-              <DeviceRow key={dev.id} dev={dev} group={group} onCommand={onCommand} customName={deviceNames?.[dev.id]} />
+          <div>
+            {devices[group].map((dev, i) => (
+              <div key={dev.id}>
+                {i > 0 && <Separator />}
+                <DeviceRow dev={dev} group={group} onCommand={onCommand} customName={deviceNames?.[dev.id]} />
+              </div>
             ))}
           </div>
         </div>
@@ -580,17 +597,11 @@ function IntegrationsPanel({
   const totalEntities = groups.reduce((n, g) => n + devices[g].length, 0);
 
   return (
-    <>
-      {open && <div className="fixed inset-0 z-40" onClick={onClose} />}
-      <div
-        className={`fixed top-0 right-0 h-full w-96 z-50 flex flex-col shadow-2xl transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-full"}`}
-        style={{ backgroundColor: "var(--bg-card)", borderLeft: "1px solid var(--border)" }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
-          <span className="font-semibold text-sm" style={{ color: "var(--text-1)" }}>Integrations</span>
-          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-sm" style={{ color: "var(--text-2)", backgroundColor: "var(--bg-input)" }}>✕</button>
-        </div>
+    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent side="right" className="w-96 sm:max-w-96 flex flex-col gap-0 p-0">
+        <SheetHeader className="px-6 py-5 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
+          <SheetTitle style={{ color: "var(--text-1)" }}>Integrations</SheetTitle>
+        </SheetHeader>
 
         <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-5">
           {/* HA integration header card */}
@@ -619,7 +630,8 @@ function IntegrationsPanel({
               </div>
               <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-app)" }}>
                 {devices[group].map((dev, i) => (
-                  <div key={dev.id} className={i > 0 ? "border-t" : ""} style={{ borderColor: "var(--border)" }}>
+                  <div key={dev.id}>
+                    {i > 0 && <Separator />}
                     {renamingId === dev.id ? (
                       <div className="px-4 py-2.5 flex items-center gap-2">
                         <input
@@ -669,8 +681,8 @@ function IntegrationsPanel({
             <p className="text-xs text-center py-10" style={{ color: "var(--text-3)" }}>No HA data yet — make sure the server agent is running.</p>
           )}
         </div>
-      </div>
-    </>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -679,7 +691,7 @@ function RadioCard({ radio, onCommand }: { radio: RadioState; onCommand: (cmd: R
   const isPlaying  = radio.playing || radio.cast.active;
 
   return (
-    <div className="rounded-xl col-span-2 border overflow-hidden" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
+    <Card className="col-span-2 border-0 gap-0 py-0 overflow-hidden" style={{ backgroundColor: "var(--bg-card)" }}>
       {/* Now-playing bar */}
       <div className="px-4 py-3 flex items-center gap-3 border-b" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-input)" }}>
         <span className="text-2xl flex-shrink-0">{nowPlaying?.favicon ?? "📻"}</span>
@@ -707,57 +719,62 @@ function RadioCard({ radio, onCommand }: { radio: RadioState; onCommand: (cmd: R
       </div>
 
       {/* Station list */}
-      <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-        {radio.stations.map((s) => {
+      <div>
+        {radio.stations.map((s, i) => {
           const isActive = radio.station?.id === s.id || (radio.cast.active && radio.cast.station?.name === s.name);
           return (
-            <button
-              key={s.id}
-              onClick={() => onCommand({ action: "play", stationId: s.id, ts: Date.now() })}
-              className="w-full px-4 py-2.5 flex items-center gap-3 transition-colors text-left active:scale-[0.99]"
-              style={{ backgroundColor: isActive ? "var(--bg-input)" : "transparent" }}
-            >
-              <span className="text-base flex-shrink-0">{s.favicon}</span>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm truncate" style={{ color: isActive ? "var(--accent)" : "var(--text-1)" }}>{s.name}</div>
-                {s.genre && <div className="text-xs truncate" style={{ color: "var(--text-3)" }}>{s.genre}</div>}
-              </div>
-              {isActive && (
-                <span className="text-xs flex-shrink-0 w-2 h-2 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
-              )}
-            </button>
+            <div key={s.id}>
+              {i > 0 && <Separator />}
+              <button
+                onClick={() => onCommand({ action: "play", stationId: s.id, ts: Date.now() })}
+                className="w-full px-4 py-2.5 flex items-center gap-3 transition-colors text-left active:scale-[0.99]"
+                style={{ backgroundColor: isActive ? "var(--bg-input)" : "transparent" }}
+              >
+                <span className="text-base flex-shrink-0">{s.favicon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm truncate" style={{ color: isActive ? "var(--accent)" : "var(--text-1)" }}>{s.name}</div>
+                  {s.genre && <div className="text-xs truncate" style={{ color: "var(--text-3)" }}>{s.genre}</div>}
+                </div>
+                {isActive && (
+                  <span className="text-xs flex-shrink-0 w-2 h-2 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
+                )}
+              </button>
+            </div>
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }
 
 function ServicesCard({ services }: { services: Service[] }) {
   if (services.length === 0) return null;
   return (
-    <div className="rounded-xl p-4 col-span-2 flex flex-col gap-3 border" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
-      <div className="flex items-center gap-2">
-        <span className="text-lg">🖥️</span>
-        <span className="text-sm font-medium" style={{ color: "var(--text-1)" }}>System Services</span>
-        <span className="ml-auto text-xs px-2 py-0.5 rounded-full" style={{ color: "var(--text-3)", backgroundColor: "var(--bg-input)" }}>
-          {services.filter((s) => s.active).length}/{services.length} active
-        </span>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        {services.map((svc) => (
-          <div key={svc.id} className="flex items-center gap-2 py-1">
-            <span
-              className="w-2 h-2 rounded-full flex-shrink-0"
-              style={{ backgroundColor: svc.active ? "#22c55e" : "#ef4444" }}
-            />
-            <span className="text-xs truncate" style={{ color: svc.active ? "var(--text-1)" : "var(--text-3)" }}>
-              {svc.label}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
+    <Card className="col-span-2 border-0" style={{ backgroundColor: "var(--bg-card)" }}>
+      <CardContent className="flex flex-col gap-3 pt-4">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">🖥️</span>
+          <span className="text-sm font-medium" style={{ color: "var(--text-1)" }}>System Services</span>
+          <Badge variant="outline" className="ml-auto text-xs" style={{ color: "var(--text-3)" }}>
+            {services.filter((s) => s.active).length}/{services.length} active
+          </Badge>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {services.map((svc) => (
+            <div key={svc.id} className="flex items-center gap-2 py-1">
+              <Badge
+                variant={svc.active ? "default" : "outline"}
+                className="w-2 h-2 p-0 rounded-full flex-shrink-0"
+                style={{ backgroundColor: svc.active ? "#22c55e" : "#ef4444", border: "none" }}
+              />
+              <span className="text-xs truncate" style={{ color: svc.active ? "var(--text-1)" : "var(--text-3)" }}>
+                {svc.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -798,15 +815,11 @@ function ServerSetupPanel({ open, onClose }: { open: boolean; onClose: () => voi
   const configSnippet = `{\n  "vercel_url": "${origin}",\n  "api_key": "${shown && token ? token : "<paste-token-here>"}"\n}`;
 
   return (
-    <>
-      {open && <div className="fixed inset-0 z-40" onClick={onClose} />}
-      <div className={`fixed top-0 right-0 h-full w-80 z-50 flex flex-col shadow-2xl transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-full"}`}
-        style={{ backgroundColor: "var(--bg-card)", borderLeft: "1px solid var(--border)" }}>
-
-        <div className="flex items-center justify-between px-6 py-5 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
-          <span className="font-semibold text-sm" style={{ color: "var(--text-1)" }}>Server Setup</span>
-          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-sm" style={{ color: "var(--text-2)", backgroundColor: "var(--bg-input)" }}>✕</button>
-        </div>
+    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent side="right" className="w-80 sm:max-w-80 flex flex-col gap-0 p-0">
+        <SheetHeader className="px-6 py-5 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
+          <SheetTitle style={{ color: "var(--text-1)" }}>Server Setup</SheetTitle>
+        </SheetHeader>
 
         <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-5">
           <p className="text-xs leading-relaxed" style={{ color: "var(--text-3)" }}>
@@ -856,8 +869,8 @@ python3 agent.py`}
             </pre>
           </div>
         </div>
-      </div>
-    </>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -868,86 +881,83 @@ function SettingsPanel({ open, onClose, style, onChange }: {
   style: OmniStyle; onChange: (s: OmniStyle) => void;
 }) {
   return (
-    <>
-      {open && <div className="fixed inset-0 z-40" onClick={onClose} />}
-      <div
-        className={`fixed top-0 right-0 h-full w-72 z-50 flex flex-col gap-6 p-6 shadow-2xl transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-full"}`}
-        style={{ backgroundColor: "var(--bg-card)", borderLeft: "1px solid var(--border)" }}
-      >
-        <div className="flex items-center justify-between">
-          <span className="font-semibold text-sm" style={{ color: "var(--text-1)" }}>Appearance</span>
-          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-sm transition-colors" style={{ color: "var(--text-2)", backgroundColor: "var(--bg-input)" }}>✕</button>
-        </div>
+    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent side="right" className="w-72 sm:max-w-72 flex flex-col gap-0 p-0">
+        <SheetHeader className="px-6 py-5 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
+          <SheetTitle style={{ color: "var(--text-1)" }}>Appearance</SheetTitle>
+        </SheetHeader>
 
-        {/* Theme */}
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Theme</span>
-          <div className="flex gap-2">
-            {(["dark", "light"] as const).map((t) => (
-              <button key={t} onClick={() => onChange({ ...style, theme: t })}
-                className="flex-1 py-2 rounded-lg text-sm font-medium transition-all"
-                style={{ backgroundColor: style.theme === t ? "var(--accent)" : "var(--bg-input)", color: style.theme === t ? "#fff" : "var(--text-2)" }}>
-                {t === "dark" ? "🌙 Dark" : "☀️ Light"}
-              </button>
-            ))}
+        <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-6">
+          {/* Theme */}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Theme</span>
+            <div className="flex gap-2">
+              {(["dark", "light"] as const).map((t) => (
+                <button key={t} onClick={() => onChange({ ...style, theme: t })}
+                  className="flex-1 py-2 rounded-lg text-sm font-medium transition-all"
+                  style={{ backgroundColor: style.theme === t ? "var(--accent)" : "var(--bg-input)", color: style.theme === t ? "#fff" : "var(--text-2)" }}>
+                  {t === "dark" ? "🌙 Dark" : "☀️ Light"}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Accent */}
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Accent color</span>
-          <div className="grid grid-cols-4 gap-2">
-            {ACCENT_COLORS.map((c) => (
-              <button key={c} onClick={() => onChange({ ...style, accent: c })}
-                className="h-9 rounded-lg transition-transform hover:scale-110 border-2"
-                style={{ backgroundColor: c, borderColor: style.accent === c ? "var(--text-1)" : "transparent" }} />
-            ))}
+          {/* Accent */}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Accent color</span>
+            <div className="grid grid-cols-4 gap-2">
+              {ACCENT_COLORS.map((c) => (
+                <button key={c} onClick={() => onChange({ ...style, accent: c })}
+                  className="h-9 rounded-lg transition-transform hover:scale-110 border-2"
+                  style={{ backgroundColor: c, borderColor: style.accent === c ? "var(--text-1)" : "transparent" }} />
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Font */}
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Font</span>
-          <div className="flex gap-2">
-            {(["sans", "mono"] as const).map((f) => (
-              <button key={f} onClick={() => onChange({ ...style, font: f })}
-                className="flex-1 py-2 rounded-lg text-sm font-medium transition-all"
-                style={{
-                  backgroundColor: style.font === f ? "var(--accent)" : "var(--bg-input)",
-                  color: style.font === f ? "#fff" : "var(--text-2)",
-                  fontFamily: f === "mono" ? "monospace" : "system-ui",
-                }}>
-                {f === "sans" ? "Sans" : "Mono"}
-              </button>
-            ))}
+          {/* Font */}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Font</span>
+            <div className="flex gap-2">
+              {(["sans", "mono"] as const).map((f) => (
+                <button key={f} onClick={() => onChange({ ...style, font: f })}
+                  className="flex-1 py-2 rounded-lg text-sm font-medium transition-all"
+                  style={{
+                    backgroundColor: style.font === f ? "var(--accent)" : "var(--bg-input)",
+                    color: style.font === f ? "#fff" : "var(--text-2)",
+                    fontFamily: f === "mono" ? "monospace" : "system-ui",
+                  }}>
+                  {f === "sans" ? "Sans" : "Mono"}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Desktop Layout */}
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Desktop Layout</span>
-          <div className="flex gap-2">
-            {(["single", "twoCol"] as const).map((l) => (
-              <button key={l} onClick={() => onChange({ ...style, desktopLayout: l })}
-                className="flex-1 py-2 rounded-lg text-xs font-medium transition-all"
-                style={{
-                  backgroundColor: style.desktopLayout === l ? "var(--accent)" : "var(--bg-input)",
-                  color: style.desktopLayout === l ? "#fff" : "var(--text-2)",
-                }}>
-                {l === "single" ? "▬ Single" : "▬ ▬ Two Col"}
-              </button>
-            ))}
+          {/* Desktop Layout */}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Desktop Layout</span>
+            <div className="flex gap-2">
+              {(["single", "twoCol"] as const).map((l) => (
+                <button key={l} onClick={() => onChange({ ...style, desktopLayout: l })}
+                  className="flex-1 py-2 rounded-lg text-xs font-medium transition-all"
+                  style={{
+                    backgroundColor: style.desktopLayout === l ? "var(--accent)" : "var(--bg-input)",
+                    color: style.desktopLayout === l ? "#fff" : "var(--text-2)",
+                  }}>
+                  {l === "single" ? "▬ Single" : "▬ ▬ Two Col"}
+                </button>
+              ))}
+            </div>
+            {style.desktopLayout === "twoCol" && (
+              <p className="text-xs" style={{ color: "var(--text-3)" }}>Use Edit mode to move sections between columns with ← →.</p>
+            )}
           </div>
-          {style.desktopLayout === "twoCol" && (
-            <p className="text-xs" style={{ color: "var(--text-3)" }}>Use Edit mode to move sections between columns with ← →.</p>
-          )}
-        </div>
 
-        <p className="text-xs mt-auto leading-relaxed" style={{ color: "var(--text-3)" }}>
-          Drag section headers or sensor cards to reorder. All preferences sync to your server.
-        </p>
-      </div>
-    </>
+          <p className="text-xs mt-auto leading-relaxed" style={{ color: "var(--text-3)" }}>
+            Drag section headers or sensor cards to reorder. All preferences sync to your server.
+          </p>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -974,6 +984,7 @@ export default function Dashboard() {
   useEffect(() => {
     const root = document.documentElement;
     root.setAttribute("data-theme", activeStyle.theme);
+    root.classList.toggle("dark", activeStyle.theme === "dark");
     root.style.setProperty("--accent", activeStyle.accent);
     document.body.style.fontFamily =
       activeStyle.font === "mono" ? '"Courier New", monospace' : "system-ui, -apple-system, sans-serif";
@@ -1177,55 +1188,78 @@ export default function Dashboard() {
           <p className="text-sm" style={{ color: "var(--text-2)" }}>Live sensor relay from your home server</p>
         </div>
         <div className="flex items-center gap-2 mt-1">
-          <button
+          <Button
             onClick={() => setEditMode(e => !e)}
-            className="px-3 py-2 rounded-xl border text-xs font-medium transition-all"
-            style={{
-              backgroundColor: editMode ? "var(--accent)" : "var(--bg-card)",
-              borderColor: editMode ? "var(--accent)" : "var(--border)",
-              color: editMode ? "#fff" : "var(--text-2)",
-            }}
+            variant={editMode ? "default" : "outline"}
+            size="sm"
+            style={editMode ? { backgroundColor: "var(--accent)", borderColor: "var(--accent)", color: "#fff" } : { backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-2)" }}
             title="Edit layout"
           >
-            {editMode ? "✓ Done" : "Edit"}
-          </button>
-          <button
-            onClick={() => setServerSetup(true)}
-            className="p-2.5 rounded-xl border transition-colors"
-            style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-2)" }}
-            title="Server setup"
-          >
-            🔑
-          </button>
-          <button
-            onClick={() => setIntegrations(true)}
-            className="relative p-2.5 rounded-xl border transition-colors"
-            style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-2)" }}
-            title="Integrations"
-          >
-            🔌
-            {(activeStyle.pinnedDevices?.length ?? 0) > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-white flex items-center justify-center text-xs font-bold" style={{ backgroundColor: "var(--accent)", fontSize: 10 }}>
-                {activeStyle.pinnedDevices.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setSettings(true)}
-            className="p-2.5 rounded-xl border transition-colors"
-            style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-2)" }}
-            title="Appearance settings"
-          >
-            ⚙️
-          </button>
-          <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="p-2.5 rounded-xl border transition-colors text-sm"
-            style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-3)" }}
-            title="Sign out"
-          >
-            ↩
-          </button>
+            {editMode ? <><Check className="size-3.5" /> Done</> : <><Pencil className="size-3.5" /> Edit</>}
+          </Button>
+          <Tooltip>
+            <TooltipTrigger>
+              <Button
+                onClick={() => setServerSetup(true)}
+                variant="outline"
+                size="icon"
+                style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-2)" }}
+                title="Server setup"
+              >
+                <Key className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Server setup</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger>
+              <div className="relative inline-flex">
+                <Button
+                  onClick={() => setIntegrations(true)}
+                  variant="outline"
+                  size="icon"
+                  style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-2)" }}
+                  title="Integrations"
+                >
+                  <Plug className="size-4" />
+                </Button>
+                {(activeStyle.pinnedDevices?.length ?? 0) > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-white flex items-center justify-center font-bold pointer-events-none" style={{ backgroundColor: "var(--accent)", fontSize: 10 }}>
+                    {activeStyle.pinnedDevices.length}
+                  </span>
+                )}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>Integrations</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger>
+              <Button
+                onClick={() => setSettings(true)}
+                variant="outline"
+                size="icon"
+                style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-2)" }}
+                title="Appearance settings"
+              >
+                <Settings2 className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Appearance</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger>
+              <Button
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                variant="outline"
+                size="icon"
+                style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-3)" }}
+                title="Sign out"
+              >
+                <LogOut className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Sign out</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -1238,10 +1272,9 @@ export default function Dashboard() {
             Local Server: {loading ? "Connecting…" : serverData?.serverOnline ? "Online" : "Offline"}
           </span>
           {(serverData?.hasPending || Object.keys(pendingValues).length > 0) && (
-            <span className="ml-2 text-xs px-2 py-0.5 rounded-full border animate-pulse"
-              style={{ color: "#fde047", backgroundColor: "rgba(234,179,8,0.1)", borderColor: "rgba(234,179,8,0.3)" }}>
+            <Badge variant="outline" className="ml-2 animate-pulse" style={{ color: "#fde047", backgroundColor: "rgba(234,179,8,0.1)", borderColor: "rgba(234,179,8,0.3)" }}>
               Syncing…
-            </span>
+            </Badge>
           )}
         </div>
         <div className="text-xs space-y-0.5 text-right" style={{ color: "var(--text-3)" }}>
@@ -1344,11 +1377,12 @@ export default function Dashboard() {
               <div className="rounded-xl p-4 border flex flex-wrap items-center gap-2" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
                 <span className="text-xs font-semibold uppercase tracking-widest mr-1" style={{ color: "var(--text-3)" }}>Hidden</span>
                 {hiddenWithData.map(sid => (
-                  <button key={sid} onClick={() => showSection(sid)}
-                    className="px-3 py-1 rounded-lg text-xs font-medium transition-all hover:opacity-80 active:scale-95"
-                    style={{ backgroundColor: "var(--bg-input)", color: "var(--text-2)", border: "1px solid var(--border)" }}>
+                  <Button key={sid} onClick={() => showSection(sid)}
+                    variant="outline"
+                    size="xs"
+                    style={{ backgroundColor: "var(--bg-input)", color: "var(--text-2)", borderColor: "var(--border)" }}>
                     + {SECTION_LABELS[sid] ?? sid}
-                  </button>
+                  </Button>
                 ))}
               </div>
             ) : null;

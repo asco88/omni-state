@@ -1,6 +1,10 @@
 import Image from "next/image";
 import { auth } from "@/auth";
 import { signIn } from "@/auth";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 export const metadata = {
   title: "SiteRelay — Your home server dashboard",
@@ -26,41 +30,26 @@ export default async function LandingPage() {
 
 function Nav({ user }: { user: { name?: string | null; email?: string | null; image?: string | null } | null }) {
   return (
-    <header
-      className="flex items-center justify-between px-6 py-4 border-b"
-      style={{ borderColor: "#1e293b" }}
-    >
+    <header className="flex items-center justify-between px-6 py-3 border-b border-white/10 backdrop-blur-sm sticky top-0 z-50" style={{ backgroundColor: "rgba(15,23,42,0.9)" }}>
       <div className="flex items-center gap-2">
         <Image src="/logo.png" alt="SiteRelay" width={160} height={87} priority />
-        <span
-          className="text-xs px-2 py-0.5 rounded-full font-medium"
-          style={{ backgroundColor: "#1e293b", color: "#64748b" }}
-        >
-          beta
-        </span>
+        <Badge variant="outline" className="text-xs border-white/20 text-slate-400">beta</Badge>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <a
           href="https://github.com/asco88/siterelay"
           target="_blank"
           rel="noopener noreferrer"
-          className="hidden sm:block text-sm transition-colors"
-          style={{ color: "#64748b" }}
+          className="hidden sm:block text-sm text-slate-400 hover:text-slate-200 transition-colors"
         >
           GitHub
         </a>
         {user ? (
           <div className="flex items-center gap-3">
-            <span className="hidden sm:block text-sm" style={{ color: "#64748b" }}>
-              {user.name ?? user.email}
-            </span>
-            <a
-              href="/dashboard"
-              className="text-sm px-4 py-2 rounded-lg font-medium transition-opacity hover:opacity-90"
-              style={{ backgroundColor: "#3b82f6", color: "#fff" }}
-            >
-              Dashboard →
-            </a>
+            <span className="hidden sm:block text-sm text-slate-400">{user.name ?? user.email}</span>
+            <Button size="sm" onClick={undefined}>
+              <a href="/dashboard" className="contents">Dashboard →</a>
+            </Button>
           </div>
         ) : (
           <SignInButton label="Sign In" />
@@ -78,13 +67,7 @@ function SignInButton({ label = "Get Started Free" }: { label?: string }) {
         await signIn("google", { redirectTo: "/dashboard" });
       }}
     >
-      <button
-        type="submit"
-        className="text-sm px-4 py-2 rounded-lg font-medium transition-opacity hover:opacity-90"
-        style={{ backgroundColor: "#3b82f6", color: "#fff" }}
-      >
-        {label}
-      </button>
+      <Button type="submit" size="sm">{label}</Button>
     </form>
   );
 }
@@ -93,13 +76,13 @@ function SignInButton({ label = "Get Started Free" }: { label?: string }) {
 
 function Hero() {
   return (
-    <section className="flex flex-col items-center text-center px-6 pt-14 sm:pt-24 pb-20 gap-8 max-w-3xl mx-auto w-full">
-      <div className="flex flex-col gap-4">
+    <section className="flex flex-col items-center text-center px-6 pt-20 sm:pt-28 pb-20 gap-8 max-w-3xl mx-auto w-full">
+      <div className="flex flex-col gap-5">
         <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-tight">
           Your home server,{" "}
-          <span style={{ color: "#3b82f6" }}>visible from anywhere</span>
+          <span className="text-blue-400">visible from anywhere</span>
         </h1>
-        <p className="text-lg max-w-xl mx-auto" style={{ color: "#94a3b8" }}>
+        <p className="text-lg max-w-xl mx-auto text-slate-400">
           SiteRelay is a real-time remote dashboard for self-hosters. Connect
           your Home Assistant instance or Linux server and see everything — live
           — from any browser, no VPN or port forwarding needed.
@@ -107,21 +90,18 @@ function Hero() {
       </div>
 
       <div className="flex flex-col sm:flex-row items-center gap-3">
-        <SignInButton />
+        <SignInButton label="Get Started Free" />
         <a
           href="https://github.com/asco88/siterelay"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm px-4 py-2 rounded-lg font-medium border transition-colors hover:border-slate-500"
-          style={{ borderColor: "#334155", color: "#cbd5e1" }}
+          className="inline-flex items-center justify-center rounded-lg border border-white/20 bg-transparent px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:border-white/40 hover:text-white"
         >
           View on GitHub
         </a>
       </div>
 
-      <p className="text-xs" style={{ color: "#475569" }}>
-        Free tier · No credit card · Open source
-      </p>
+      <p className="text-xs text-slate-500">Free tier · No credit card · Open source</p>
 
       <DashboardPreview />
     </section>
@@ -130,102 +110,80 @@ function Hero() {
 
 function DashboardPreview() {
   return (
-    <div
-      className="w-full rounded-2xl border overflow-hidden text-left"
-      style={{ backgroundColor: "#1e293b", borderColor: "#334155" }}
-    >
-      {/* window chrome */}
-      <div
-        className="flex items-center gap-2 px-4 py-3 border-b"
-        style={{ backgroundColor: "#0f172a", borderColor: "#334155" }}
-      >
-        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#ef4444" }} />
-        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#f59e0b" }} />
-        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#22c55e" }} />
-        <span className="ml-3 text-xs" style={{ color: "#475569" }}>
-          siterelay.app
-        </span>
+    <Card className="w-full text-left border-white/10 bg-slate-900/80 shadow-2xl">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-slate-950/60 rounded-t-xl">
+        <div className="w-3 h-3 rounded-full bg-red-500" />
+        <div className="w-3 h-3 rounded-full bg-yellow-500" />
+        <div className="w-3 h-3 rounded-full bg-green-500" />
+        <span className="ml-3 text-xs text-slate-500">siterelay.app</span>
       </div>
-
-      {/* mock dashboard content */}
-      <div className="p-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <CardContent className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
         {MOCK_SENSORS.map((s) => (
-          <SensorCard key={s.label} {...s} />
+          <MockSensorCard key={s.label} {...s} />
         ))}
-      </div>
-      <div className="px-6 pb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+      </CardContent>
+      <div className="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <MockServiceCard />
         <MockActionsCard />
       </div>
-    </div>
+    </Card>
   );
 }
 
 const MOCK_SENSORS = [
-  { label: "CPU", value: "4%",  sub: "0.3 avg",   dot: "#22c55e" },
-  { label: "Memory", value: "29%", sub: "2.3 / 8 GB", dot: "#3b82f6" },
-  { label: "Disk", value: "33%", sub: "82 / 256 GB",  dot: "#3b82f6" },
-  { label: "Solar", value: "1.9 kW", sub: "battery 100%", dot: "#f59e0b" },
+  { label: "CPU",    value: 4,  display: "4%",       sub: "0.3 avg",      color: "bg-green-500",  pct: 4  },
+  { label: "Memory", value: 29, display: "29%",       sub: "2.3 / 8 GB",   color: "bg-blue-500",   pct: 29 },
+  { label: "Disk",   value: 33, display: "33%",       sub: "82 / 256 GB",  color: "bg-blue-500",   pct: 33 },
+  { label: "Solar",  value: 80, display: "1.9 kW",    sub: "battery 100%", color: "bg-yellow-500", pct: 80 },
 ];
 
-function SensorCard({ label, value, sub, dot }: { label: string; value: string; sub: string; dot: string }) {
+function MockSensorCard({ label, display, sub, color, pct }: { label: string; display: string; sub: string; color: string; pct: number }) {
   return (
-    <div
-      className="rounded-xl p-4 flex flex-col gap-1 border"
-      style={{ backgroundColor: "#0f172a", borderColor: "#1e293b" }}
-    >
-      <div className="flex items-center gap-1.5">
-        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: dot }} />
-        <span className="text-xs font-medium" style={{ color: "#64748b" }}>{label}</span>
-      </div>
-      <span className="text-xl font-bold">{value}</span>
-      <span className="text-xs" style={{ color: "#475569" }}>{sub}</span>
-    </div>
+    <Card className="bg-slate-950/60 border-white/10">
+      <CardContent className="p-4 flex flex-col gap-2">
+        <div className="flex items-center gap-1.5">
+          <div className={`w-2 h-2 rounded-full ${color}`} />
+          <span className="text-xs font-medium text-slate-400">{label}</span>
+        </div>
+        <span className="text-xl font-bold text-white">{display}</span>
+        <Progress value={pct} className="h-1.5" />
+        <span className="text-xs text-slate-500">{sub}</span>
+      </CardContent>
+    </Card>
   );
 }
 
 function MockServiceCard() {
   return (
-    <div
-      className="rounded-xl p-4 border flex flex-col gap-3"
-      style={{ backgroundColor: "#0f172a", borderColor: "#1e293b" }}
-    >
-      <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748b" }}>Services</span>
-      {[
-        { name: "radio-player", ok: true },
-        { name: "home-data-share", ok: true },
-        { name: "real-sensors", ok: true },
-      ].map((s) => (
-        <div key={s.name} className="flex items-center justify-between">
-          <span className="text-sm">{s.name}</span>
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: "#14532d", color: "#86efac" }}>
-            running
-          </span>
-        </div>
-      ))}
-    </div>
+    <Card className="bg-slate-950/60 border-white/10">
+      <CardContent className="p-4 flex flex-col gap-3">
+        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Services</span>
+        {["radio-player", "home-data-share", "real-sensors"].map((name) => (
+          <div key={name} className="flex items-center justify-between">
+            <span className="text-sm text-slate-200">{name}</span>
+            <Badge className="bg-green-950 text-green-400 border-green-800 text-xs">running</Badge>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 
 function MockActionsCard() {
   return (
-    <div
-      className="rounded-xl p-4 border flex flex-col gap-3"
-      style={{ backgroundColor: "#0f172a", borderColor: "#1e293b" }}
-    >
-      <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748b" }}>Automations</span>
-      {["Good morning", "Away mode", "Movie time"].map((a) => (
-        <div key={a} className="flex items-center justify-between">
-          <span className="text-sm">{a}</span>
-          <div
-            className="text-xs px-3 py-1 rounded-lg border cursor-default"
-            style={{ borderColor: "#334155", color: "#94a3b8" }}
-          >
-            Run
+    <Card className="bg-slate-950/60 border-white/10">
+      <CardContent className="p-4 flex flex-col gap-3">
+        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Automations</span>
+        {["Good morning", "Away mode", "Movie time"].map((a) => (
+          <div key={a} className="flex items-center justify-between">
+            <span className="text-sm text-slate-200">{a}</span>
+            <Button variant="outline" size="sm" className="h-7 text-xs border-white/20 text-slate-400 bg-transparent hover:bg-white/10">
+              Run
+            </Button>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -266,26 +224,21 @@ const FEATURES = [
 
 function Features() {
   return (
-    <section
-      className="px-6 py-20 border-t"
-      style={{ borderColor: "#1e293b" }}
-    >
+    <section className="px-6 py-20 border-t border-white/10">
       <div className="max-w-5xl mx-auto flex flex-col gap-12">
         <div className="text-center flex flex-col gap-2">
-          <h2 className="text-3xl font-bold">Everything you need, nothing you don't</h2>
-          <p style={{ color: "#64748b" }}>Built for self-hosters who value simplicity and control.</p>
+          <h2 className="text-3xl font-bold text-white">Everything you need, nothing you don't</h2>
+          <p className="text-slate-400">Built for self-hosters who value simplicity and control.</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className="rounded-2xl p-6 border flex flex-col gap-3"
-              style={{ backgroundColor: "#1e293b", borderColor: "#334155" }}
-            >
-              <span className="text-2xl">{f.icon}</span>
-              <h3 className="font-semibold">{f.title}</h3>
-              <p className="text-sm leading-relaxed" style={{ color: "#94a3b8" }}>{f.body}</p>
-            </div>
+            <Card key={f.title} className="bg-slate-800/60 border-white/10 hover:border-white/20 transition-colors">
+              <CardContent className="p-6 flex flex-col gap-3">
+                <span className="text-2xl">{f.icon}</span>
+                <h3 className="font-semibold text-white">{f.title}</h3>
+                <p className="text-sm leading-relaxed text-slate-400">{f.body}</p>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
@@ -320,37 +273,27 @@ const STEPS = [
 
 function HowItWorks() {
   return (
-    <section
-      className="px-6 py-20 border-t"
-      style={{ borderColor: "#1e293b" }}
-    >
+    <section className="px-6 py-20 border-t border-white/10">
       <div className="max-w-3xl mx-auto flex flex-col gap-12">
         <div className="text-center flex flex-col gap-2">
-          <h2 className="text-3xl font-bold">Up and running in minutes</h2>
-          <p style={{ color: "#64748b" }}>No devops experience required.</p>
+          <h2 className="text-3xl font-bold text-white">Up and running in minutes</h2>
+          <p className="text-slate-400">No devops experience required.</p>
         </div>
         <ol className="flex flex-col gap-6">
           {STEPS.map((s) => (
-            <li
-              key={s.n}
-              className="flex gap-5 items-start"
-            >
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 mt-0.5"
-                style={{ backgroundColor: "#1e3a5f", color: "#3b82f6" }}
-              >
+            <li key={s.n} className="flex gap-5 items-start">
+              <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 mt-0.5 bg-blue-950 text-blue-400 border border-blue-800">
                 {s.n}
               </div>
               <div className="flex flex-col gap-1">
-                <h3 className="font-semibold">{s.title}</h3>
-                <p className="text-sm leading-relaxed" style={{ color: "#94a3b8" }}>{s.body}</p>
+                <h3 className="font-semibold text-white">{s.title}</h3>
+                <p className="text-sm leading-relaxed text-slate-400">{s.body}</p>
               </div>
             </li>
           ))}
         </ol>
-
         <div className="flex justify-center">
-          <SignInButton />
+          <SignInButton label="Get Started Free" />
         </div>
       </div>
     </section>
@@ -361,23 +304,13 @@ function HowItWorks() {
 
 function Footer() {
   return (
-    <footer
-      className="mt-auto border-t px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm"
-      style={{ borderColor: "#1e293b", color: "#475569" }}
-    >
+    <footer className="mt-auto border-t border-white/10 px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-500">
       <span>SiteRelay — MIT License</span>
       <div className="flex items-center gap-6">
-        <a
-          href="https://github.com/asco88/siterelay"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:text-slate-300 transition-colors"
-        >
+        <a href="https://github.com/asco88/siterelay" target="_blank" rel="noopener noreferrer" className="hover:text-slate-300 transition-colors">
           GitHub
         </a>
-        <a href="/login" className="hover:text-slate-300 transition-colors">
-          Sign in
-        </a>
+        <a href="/login" className="hover:text-slate-300 transition-colors">Sign in</a>
       </div>
     </footer>
   );

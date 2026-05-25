@@ -25,3 +25,4 @@ web/.vercel/
 # OS
 .DS_Store
 Thumbs.db
+.vercel

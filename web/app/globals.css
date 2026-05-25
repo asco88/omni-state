@@ -1,18 +1,43 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-/* ── OmniState theme tokens ─────────────────────────────────────────────── */
+@custom-variant dark (&:is(.dark *));
+
+/* ── SiteRelay tokens (source of truth) ─────────────────────────────────── */
 
 :root {
+  /* App palette — dark by default */
   --bg-app:   #030712;
   --bg-card:  #111827;
-  --bg-input: #374151;
+  --bg-input: #1f2937;
   --border:   #1f2937;
   --text-1:   #f9fafb;
   --text-2:   #9ca3af;
   --text-3:   #6b7280;
   --accent:   #3b82f6;
+
+  /* shadcn tokens — mapped to SiteRelay values */
+  --background:           var(--bg-app);
+  --foreground:           var(--text-1);
+  --card:                 var(--bg-card);
+  --card-foreground:      var(--text-1);
+  --popover:              var(--bg-card);
+  --popover-foreground:   var(--text-1);
+  --primary:              var(--accent);
+  --primary-foreground:   #ffffff;
+  --secondary:            var(--bg-input);
+  --secondary-foreground: var(--text-1);
+  --muted:                var(--bg-input);
+  --muted-foreground:     var(--text-3);
+  --accent-foreground:    var(--text-1);
+  --destructive:          oklch(0.704 0.191 22.216);
+  --input:                var(--bg-input);
+  --ring:                 var(--accent);
+  --radius:               0.75rem;
 }
 
+/* Light theme overrides */
 [data-theme="light"] {
   --bg-app:   #f8fafc;
   --bg-card:  #ffffff;
@@ -27,4 +52,40 @@ body {
   background: var(--bg-app);
   color: var(--text-1);
   transition: background-color 0.3s, color 0.3s;
+}
+
+@theme inline {
+  --color-background:           var(--background);
+  --color-foreground:           var(--foreground);
+  --color-card:                 var(--card);
+  --color-card-foreground:      var(--card-foreground);
+  --color-popover:              var(--popover);
+  --color-popover-foreground:   var(--popover-foreground);
+  --color-primary:              var(--primary);
+  --color-primary-foreground:   var(--primary-foreground);
+  --color-secondary:            var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:                var(--muted);
+  --color-muted-foreground:     var(--muted-foreground);
+  --color-accent:               var(--accent);
+  --color-accent-foreground:    var(--accent-foreground);
+  --color-destructive:          var(--destructive);
+  --color-border:               var(--border);
+  --color-input:                var(--input);
+  --color-ring:                 var(--ring);
+  --radius-sm:   calc(var(--radius) - 4px);
+  --radius-md:   calc(var(--radius) - 2px);
+  --radius-lg:   var(--radius);
+  --radius-xl:   calc(var(--radius) + 4px);
+  --font-sans:   var(--font-geist-sans);
+  --font-mono:   var(--font-geist-mono);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
