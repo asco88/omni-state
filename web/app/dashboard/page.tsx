@@ -330,19 +330,25 @@ function SensorCard({ sensor, dragHandleProps, editMode }: { sensor: Sensor; dra
   const color = valueColor(ratio);
   return (
     <div
-      className={`rounded-xl p-4 flex flex-col gap-3 border shadow-sm select-none transition-all ${editMode ? "cursor-grab active:cursor-grabbing" : ""}`}
-      style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}
+      className={`rounded-xl p-5 flex flex-col gap-4 select-none transition-all ${editMode ? "cursor-grab active:cursor-grabbing" : ""}`}
+      style={{
+        backgroundColor: "var(--bg-card)",
+        borderTop: `3px solid ${color}`,
+        boxShadow: `0 0 0 1px rgba(255,255,255,0.06), 0 8px 24px rgba(0,0,0,0.5)`,
+      }}
       {...(dragHandleProps as React.HTMLAttributes<HTMLDivElement>)}
     >
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-3)" }}>{sensor.label}</span>
-        <span className="text-base">{SENSOR_ICONS[sensor.id] ?? "📊"}</span>
+        <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>{sensor.label}</span>
+        <span className="text-lg">{SENSOR_ICONS[sensor.id] ?? "📊"}</span>
       </div>
-      <div className="text-3xl font-bold tabular-nums" style={{ color }}>
-        {sensor.value}
-        <span className="text-sm font-normal ml-1" style={{ color: "var(--text-3)" }}>{sensor.unit}</span>
+      <div className="flex items-end gap-1.5">
+        <span className="text-4xl font-bold tabular-nums leading-none" style={{ color }}>{sensor.value}</span>
+        <span className="text-sm mb-0.5" style={{ color: "var(--text-3)" }}>{sensor.unit}</span>
       </div>
-      <Progress value={Math.round(ratio * 100)} className="h-1" style={{ "--progress-color": color } as React.CSSProperties} />
+      <div className="w-full h-1 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-input)" }}>
+        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.round(ratio * 100)}%`, backgroundColor: color }} />
+      </div>
     </div>
   );
 }
@@ -1164,7 +1170,7 @@ export default function Dashboard() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center p-6 gap-6 transition-colors duration-300">
+    <main className="min-h-screen flex flex-col items-center p-6 gap-6 transition-colors duration-300" style={{ backgroundColor: "var(--bg-app)" }}>
 
       <ServerSetupPanel open={serverSetupOpen} onClose={() => setServerSetup(false)} />
       <SettingsPanel open={settingsOpen} onClose={() => setSettings(false)} style={activeStyle} onChange={handleStyleChange} />
@@ -1181,8 +1187,8 @@ export default function Dashboard() {
       {/* Header */}
       <div className={`w-full flex items-center justify-between ${activeStyle.desktopLayout === "twoCol" ? "max-w-2xl lg:max-w-5xl" : "max-w-2xl"}`}>
         <div>
-          <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--text-1)" }}>SiteRelay</h1>
-          <p className="text-xs mt-0.5" style={{ color: "var(--text-3)" }}>Live sensor relay from your home server</p>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text-1)" }}>SiteRelay</h1>
+          <p className="text-xs mt-0.5" style={{ color: "var(--text-3)" }}>Live dashboard</p>
         </div>
         <div className="flex items-center gap-1.5">
           <Button

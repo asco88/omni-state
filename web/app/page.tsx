@@ -32,7 +32,7 @@ function Nav({ user }: { user: { name?: string | null; email?: string | null; im
   return (
     <header className="flex items-center justify-between px-6 py-3 border-b border-white/10 backdrop-blur-sm sticky top-0 z-50" style={{ backgroundColor: "rgba(15,23,42,0.9)" }}>
       <div className="flex items-center gap-2">
-        <Image src="/logo.png" alt="SiteRelay" width={160} height={87} priority />
+        <Image src="/logo-v2.png" alt="SiteRelay" width={160} height={90} priority />
         <Badge variant="outline" className="text-xs border-white/20 text-slate-400">beta</Badge>
       </div>
       <div className="flex items-center gap-3">
