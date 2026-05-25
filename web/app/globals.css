@@ -8,14 +8,15 @@
 
 :root {
   /* App palette — dark by default */
-  --bg-app:   #030712;
-  --bg-card:  #111827;
-  --bg-input: #1f2937;
-  --border:   #1f2937;
-  --text-1:   #f9fafb;
-  --text-2:   #9ca3af;
-  --text-3:   #6b7280;
+  --bg-app:   #020617;
+  --bg-card:  #0f172a;
+  --bg-input: #1e293b;
+  --border:   #1e293b;
+  --text-1:   #f8fafc;
+  --text-2:   #94a3b8;
+  --text-3:   #475569;
   --accent:   #3b82f6;
+  --radius:   0.75rem;
 
   /* shadcn tokens — mapped to SiteRelay values */
   --background:           var(--bg-app);
@@ -39,9 +40,9 @@
 
 /* Light theme overrides */
 [data-theme="light"] {
-  --bg-app:   #f8fafc;
+  --bg-app:   #f1f5f9;
   --bg-card:  #ffffff;
-  --bg-input: #f1f5f9;
+  --bg-input: #f8fafc;
   --border:   #e2e8f0;
   --text-1:   #0f172a;
   --text-2:   #475569;

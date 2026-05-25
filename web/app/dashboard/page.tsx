@@ -329,23 +329,21 @@ function SensorCard({ sensor, dragHandleProps, editMode }: { sensor: Sensor; dra
   const ratio = (sensor.value - sensor.min) / (sensor.max - sensor.min);
   const color = valueColor(ratio);
   return (
-    <Card
-      className={`select-none border-0 ${editMode ? "cursor-grab active:cursor-grabbing" : ""}`}
-      style={{ backgroundColor: "var(--bg-card)" }}
+    <div
+      className={`rounded-xl p-4 flex flex-col gap-3 border shadow-sm select-none transition-all ${editMode ? "cursor-grab active:cursor-grabbing" : ""}`}
+      style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}
       {...(dragHandleProps as React.HTMLAttributes<HTMLDivElement>)}
     >
-      <CardContent className="flex flex-col gap-3 pt-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm" style={{ color: "var(--text-2)" }}>{sensor.label}</span>
-          <span className="text-lg">{SENSOR_ICONS[sensor.id] ?? "📊"}</span>
-        </div>
-        <div className="text-3xl font-bold tabular-nums" style={{ color }}>
-          {sensor.value}
-          <span className="text-base font-normal ml-1" style={{ color: "var(--text-3)" }}>{sensor.unit}</span>
-        </div>
-        <Progress value={Math.round(ratio * 100)} className="h-1.5" />
-      </CardContent>
-    </Card>
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-3)" }}>{sensor.label}</span>
+        <span className="text-base">{SENSOR_ICONS[sensor.id] ?? "📊"}</span>
+      </div>
+      <div className="text-3xl font-bold tabular-nums" style={{ color }}>
+        {sensor.value}
+        <span className="text-sm font-normal ml-1" style={{ color: "var(--text-3)" }}>{sensor.unit}</span>
+      </div>
+      <Progress value={Math.round(ratio * 100)} className="h-1" style={{ "--progress-color": color } as React.CSSProperties} />
+    </div>
   );
 }
 
@@ -353,7 +351,7 @@ function ToggleSwitch({
   toggle, onToggle, dragHandleProps, editMode,
 }: { toggle: Toggle; onToggle: (id: string) => void; dragHandleProps: Record<string, unknown>; editMode: boolean }) {
   return (
-    <Card className="border-0" style={{ backgroundColor: "var(--bg-card)" }}>
+    <Card className="shadow-sm">
       <CardContent className="flex items-center justify-between pt-4">
         <div className="flex items-center gap-2 min-w-0">
           {editMode && (
@@ -389,7 +387,7 @@ function VolumeSlider({ slider, onCommit }: { slider: Slider; onCommit: (id: str
   const color = valueColor(ratio);
 
   return (
-    <Card className="col-span-2 border-0" style={{ backgroundColor: "var(--bg-card)" }}>
+    <Card className="col-span-2 shadow-sm">
       <CardContent className="flex flex-col gap-3 pt-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -417,7 +415,7 @@ function VolumeSlider({ slider, onCommit }: { slider: Slider; onCommit: (id: str
 
 function FileCard({ group }: { group: FileGroup }) {
   return (
-    <Card className="col-span-2 border-0" style={{ backgroundColor: "var(--bg-card)" }}>
+    <Card className="col-span-2 shadow-sm">
       <CardContent className="flex flex-col gap-3 pt-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -599,8 +597,8 @@ function IntegrationsPanel({
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent side="right" className="w-96 sm:max-w-96 flex flex-col gap-0 p-0">
-        <SheetHeader className="px-6 py-5 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
-          <SheetTitle style={{ color: "var(--text-1)" }}>Integrations</SheetTitle>
+        <SheetHeader className="px-6 py-5 border-b flex-shrink-0">
+          <SheetTitle>Integrations</SheetTitle>
         </SheetHeader>
 
         <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-5">
@@ -691,7 +689,7 @@ function RadioCard({ radio, onCommand }: { radio: RadioState; onCommand: (cmd: R
   const isPlaying  = radio.playing || radio.cast.active;
 
   return (
-    <Card className="col-span-2 border-0 gap-0 py-0 overflow-hidden" style={{ backgroundColor: "var(--bg-card)" }}>
+    <Card className="col-span-2 shadow-md gap-0 py-0 overflow-hidden">
       {/* Now-playing bar */}
       <div className="px-4 py-3 flex items-center gap-3 border-b" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-input)" }}>
         <span className="text-2xl flex-shrink-0">{nowPlaying?.favicon ?? "📻"}</span>
@@ -750,7 +748,7 @@ function RadioCard({ radio, onCommand }: { radio: RadioState; onCommand: (cmd: R
 function ServicesCard({ services }: { services: Service[] }) {
   if (services.length === 0) return null;
   return (
-    <Card className="col-span-2 border-0" style={{ backgroundColor: "var(--bg-card)" }}>
+    <Card className="col-span-2 shadow-sm">
       <CardContent className="flex flex-col gap-3 pt-4">
         <div className="flex items-center gap-2">
           <span className="text-lg">🖥️</span>
@@ -759,17 +757,16 @@ function ServicesCard({ services }: { services: Service[] }) {
             {services.filter((s) => s.active).length}/{services.length} active
           </Badge>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-col gap-2">
           {services.map((svc) => (
-            <div key={svc.id} className="flex items-center gap-2 py-1">
-              <Badge
-                variant={svc.active ? "default" : "outline"}
-                className="w-2 h-2 p-0 rounded-full flex-shrink-0"
-                style={{ backgroundColor: svc.active ? "#22c55e" : "#ef4444", border: "none" }}
-              />
-              <span className="text-xs truncate" style={{ color: svc.active ? "var(--text-1)" : "var(--text-3)" }}>
-                {svc.label}
-              </span>
+            <div key={svc.id} className="flex items-center justify-between py-1">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: svc.active ? "#22c55e" : "#ef4444" }} />
+                <span className="text-sm" style={{ color: "var(--text-1)" }}>{svc.label}</span>
+              </div>
+              <Badge variant="outline" className={svc.active ? "border-green-800 text-green-400 bg-green-950/50" : "border-red-800 text-red-400 bg-red-950/50"}>
+                {svc.active ? "running" : "stopped"}
+              </Badge>
             </div>
           ))}
         </div>
@@ -817,8 +814,8 @@ function ServerSetupPanel({ open, onClose }: { open: boolean; onClose: () => voi
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent side="right" className="w-80 sm:max-w-80 flex flex-col gap-0 p-0">
-        <SheetHeader className="px-6 py-5 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
-          <SheetTitle style={{ color: "var(--text-1)" }}>Server Setup</SheetTitle>
+        <SheetHeader className="px-6 py-5 border-b flex-shrink-0">
+          <SheetTitle>Server Setup</SheetTitle>
         </SheetHeader>
 
         <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-5">
@@ -883,8 +880,8 @@ function SettingsPanel({ open, onClose, style, onChange }: {
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent side="right" className="w-72 sm:max-w-72 flex flex-col gap-0 p-0">
-        <SheetHeader className="px-6 py-5 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
-          <SheetTitle style={{ color: "var(--text-1)" }}>Appearance</SheetTitle>
+        <SheetHeader className="px-6 py-5 border-b flex-shrink-0">
+          <SheetTitle>Appearance</SheetTitle>
         </SheetHeader>
 
         <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-6">
@@ -1167,7 +1164,7 @@ export default function Dashboard() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center p-6 gap-6 transition-colors duration-300" style={{ backgroundColor: "var(--bg-app)", color: "var(--text-1)" }}>
+    <main className="min-h-screen flex flex-col items-center p-6 gap-6 transition-colors duration-300">
 
       <ServerSetupPanel open={serverSetupOpen} onClose={() => setServerSetup(false)} />
       <SettingsPanel open={settingsOpen} onClose={() => setSettings(false)} style={activeStyle} onChange={handleStyleChange} />
@@ -1182,17 +1179,17 @@ export default function Dashboard() {
       />
 
       {/* Header */}
-      <div className={`w-full flex items-start justify-between ${activeStyle.desktopLayout === "twoCol" ? "max-w-2xl lg:max-w-5xl" : "max-w-2xl"}`}>
+      <div className={`w-full flex items-center justify-between ${activeStyle.desktopLayout === "twoCol" ? "max-w-2xl lg:max-w-5xl" : "max-w-2xl"}`}>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-1">SiteRelay</h1>
-          <p className="text-sm" style={{ color: "var(--text-2)" }}>Live sensor relay from your home server</p>
+          <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--text-1)" }}>SiteRelay</h1>
+          <p className="text-xs mt-0.5" style={{ color: "var(--text-3)" }}>Live sensor relay from your home server</p>
         </div>
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-1.5">
           <Button
             onClick={() => setEditMode(e => !e)}
-            variant={editMode ? "default" : "outline"}
+            variant={editMode ? "default" : "ghost"}
             size="sm"
-            style={editMode ? { backgroundColor: "var(--accent)", borderColor: "var(--accent)", color: "#fff" } : { backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-2)" }}
+            className={editMode ? "bg-blue-600 hover:bg-blue-700 text-white border-0" : ""}
             title="Edit layout"
           >
             {editMode ? <><Check className="size-3.5" /> Done</> : <><Pencil className="size-3.5" /> Edit</>}
@@ -1201,9 +1198,8 @@ export default function Dashboard() {
             <TooltipTrigger>
               <Button
                 onClick={() => setServerSetup(true)}
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-2)" }}
                 title="Server setup"
               >
                 <Key className="size-4" />
@@ -1216,9 +1212,8 @@ export default function Dashboard() {
               <div className="relative inline-flex">
                 <Button
                   onClick={() => setIntegrations(true)}
-                  variant="outline"
+                  variant="ghost"
                   size="icon"
-                  style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-2)" }}
                   title="Integrations"
                 >
                   <Plug className="size-4" />
@@ -1236,9 +1231,8 @@ export default function Dashboard() {
             <TooltipTrigger>
               <Button
                 onClick={() => setSettings(true)}
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-2)" }}
                 title="Appearance settings"
               >
                 <Settings2 className="size-4" />
@@ -1250,9 +1244,8 @@ export default function Dashboard() {
             <TooltipTrigger>
               <Button
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-3)" }}
                 title="Sign out"
               >
                 <LogOut className="size-4" />
@@ -1264,7 +1257,7 @@ export default function Dashboard() {
       </div>
 
       {/* Status bar */}
-      <div className={`w-full rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3 border ${activeStyle.desktopLayout === "twoCol" ? "max-w-2xl lg:max-w-5xl" : "max-w-2xl"}`} style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
+      <div className={`w-full rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3 border shadow-md ${activeStyle.desktopLayout === "twoCol" ? "max-w-2xl lg:max-w-5xl" : "max-w-2xl"}`} style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border)" }}>
         <div className="flex items-center gap-2 flex-1">
           <span className={`w-2.5 h-2.5 rounded-full inline-block ${loading ? "animate-pulse" : ""}`}
             style={{ backgroundColor: loading ? "#facc15" : serverData?.serverOnline ? "#22c55e" : "#ef4444" }} />
